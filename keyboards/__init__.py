@@ -11,6 +11,11 @@ from keyboards.admin import (
     get_admin_products_keyboard,
     get_order_status_keyboard
 )
+from keyboards.reply import (
+    get_main_menu,
+    get_admin_menu,
+    get_hidden_keyboard
+)
 
 __all__ = [
     "get_products_keyboard",
@@ -21,5 +26,8 @@ __all__ = [
     "get_admin_main_keyboard",
     "get_admin_orders_keyboard",
     "get_admin_products_keyboard",
-    "get_order_status_keyboard"
+    "get_order_status_keyboard",
+    "get_main_menu",
+    "get_admin_menu",
+    "get_hidden_keyboard"
 ]

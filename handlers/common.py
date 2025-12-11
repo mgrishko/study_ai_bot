@@ -3,6 +3,8 @@ from aiogram.filters import CommandStart, Command
 from aiogram.types import Message
 
 from database import db
+from keyboards import get_main_menu, get_admin_menu
+from config import ADMIN_IDS
 
 router = Router()
 
@@ -17,6 +19,10 @@ async def command_start_handler(message: Message) -> None:
         message.from_user.last_name
     )
     
+    # Определяем меню в зависимости от статуса пользователя
+    is_admin = message.from_user.id in ADMIN_IDS
+    menu = get_admin_menu() if is_admin else get_main_menu()
+    
     await message.answer(
         f"👋 Вітаємо, {html.bold(message.from_user.full_name)}!\n\n"
         f"🧥 Ласкаво просимо до нашого магазину верхнього одягу!\n\n"
@@ -26,7 +32,8 @@ async def command_start_handler(message: Message) -> None:
         f"• Плащі\n"
         f"• Вітрівки\n"
         f"• Пуховики\n\n"
-        f"Використовуйте команду /help для перегляду всіх доступних команд."
+        f"Використовуйте меню нижче для навігації.",
+        reply_markup=menu
     )
 
 

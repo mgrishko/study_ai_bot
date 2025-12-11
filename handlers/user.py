@@ -8,10 +8,120 @@ from keyboards import (
     get_order_keyboard,
     get_product_details_keyboard,
     get_order_confirmation_keyboard,
-    get_my_orders_keyboard
+    get_my_orders_keyboard,
+    get_main_menu,
+    get_admin_menu
 )
+from config import ADMIN_IDS
 
 router = Router()
+
+
+# Обработчики для кнопок меню
+@router.message(F.text == "🛍️ Каталог")
+async def handle_catalog_button(message: Message) -> None:
+    """Обработчик кнопки каталога."""
+    products = await db.get_all_products()
+    
+    if not products:
+        await message.answer("😔 На жаль, наразі немає товарів в наявності.")
+        return
+    
+    catalog_text = (
+        f"🛍 {html.bold('Каталог товарів:')}\n\n"
+        f"Натисніть на товар, щоб переглянути деталі та замовити:"
+    )
+    
+    await message.answer(catalog_text, reply_markup=get_products_keyboard(products))
+
+
+@router.message(F.text == "📦 Мои заказы")
+async def handle_my_orders_button(message: Message) -> None:
+    """Обработчик кнопки мои заказы."""
+    orders = await db.get_user_orders(message.from_user.id)
+    
+    if not orders:
+        await message.answer("У вас ещё нет заказов.")
+        return
+    
+    orders_text = f"📦 {html.bold('Ваши заказы:')}\n\n"
+    
+    await message.answer(orders_text, reply_markup=get_my_orders_keyboard(orders))
+
+
+@router.message(F.text == "📚 Категории")
+async def handle_categories_button(message: Message) -> None:
+    """Обработчик кнопки категории."""
+    categories = await db.get_categories()
+    
+    if not categories:
+        await message.answer("😔 Категории не найдены.")
+        return
+    
+    categories_text = f"📚 {html.bold('Категории товаров:')}\n\n"
+    categories_list = "\n".join([f"• {cat}" for cat in categories])
+    
+    await message.answer(f"{categories_text}{categories_list}")
+
+
+@router.message(F.text == "❓ Помощь")
+async def handle_help_button(message: Message) -> None:
+    """Обработчик кнопки помощь."""
+    help_text = (
+        f"📋 {html.bold('Доступные команды:')}\n\n"
+        f"/start - Начать заново\n"
+        f"/help - Это сообщение\n"
+        f"/info - Информация о боте\n"
+        f"/catalog - Просмотр каталога\n"
+        f"/order - Оформить заказ\n"
+        f"/myorders - Мои заказы\n"
+        f"/generate - AI генератор изображений\n\n"
+        f"💡 Используйте кнопки меню ниже для быстрого доступа!"
+    )
+    await message.answer(help_text)
+
+
+@router.message(F.text == "ℹ️ О магазине")
+async def handle_info_button(message: Message) -> None:
+    """Обработчик кнопки о магазине."""
+    info_text = (
+        f"ℹ️ {html.bold('Информация о боте')}\n\n"
+        f"🤖 Название: Магазин верхнього одягу\n"
+        f"📦 Версия: 1.0\n"
+        f"🛠 Технологии: Python 3.14, Aiogram 3.0, PostgreSQL\n\n"
+        f"📝 {html.bold('Функционал:')}\n"
+        f"• Просмотр каталога товаров\n"
+        f"• Оформление заказов\n"
+        f"• Отслеживание статуса заказов\n"
+        f"• Поиск по категориям\n"
+        f"• AI генератор изображений\n\n"
+        f"📞 {html.bold('Контакты:')}\n"
+        f"📧 Email: shop@example.com\n"
+        f"📱 Телефон: +380 XX XXX XX XX\n"
+        f"🕐 Часы работы: 9:00 - 21:00 (ежедневно)\n\n"
+        f"🚚 Бесплатная доставка от 1000 грн!"
+    )
+    await message.answer(info_text)
+
+
+@router.message(F.text == "🎨 AI")
+async def handle_ai_button(message: Message) -> None:
+    """Обработчик кнопки AI генератора."""
+    await message.answer(
+        "🎨 Для использования AI генератора используйте команду /generate"
+    )
+
+
+@router.message(F.text == "⚙️ Администратор")
+async def handle_admin_button(message: Message) -> None:
+    """Обработчик кнопки администратор."""
+    if message.from_user.id not in ADMIN_IDS:
+        await message.answer("❌ У вас нет доступа к администраторской панели.")
+        return
+    
+    await message.answer(
+        "⚙️ Для доступа к администраторской панели используйте команду /admin"
+    )
 
 
 @router.message(Command("catalog"))
