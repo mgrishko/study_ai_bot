@@ -178,6 +178,12 @@ class Database:
                 user_id, username, first_name, last_name
             )
     
+    async def get_user(self, user_id: int) -> Optional[Dict]:
+        """Отримати користувача за ID."""
+        async with self.pool.acquire() as conn:
+            row = await conn.fetchrow("SELECT * FROM users WHERE id = $1", user_id)
+            return dict(row) if row else None
+    
     async def get_categories(self) -> List[str]:
         """Отримати список всіх категорій."""
         async with self.pool.acquire() as conn:
