@@ -2,7 +2,7 @@ from aiogram import Router, html, F
 from aiogram.filters import Command
 from aiogram.types import Message, CallbackQuery
 
-from database import Database
+from database import db
 from keyboards import (
     get_products_keyboard,
     get_order_keyboard,
@@ -12,7 +12,6 @@ from keyboards import (
 )
 
 router = Router()
-db = Database()
 
 
 @router.message(Command("catalog"))

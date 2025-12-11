@@ -2,10 +2,9 @@ from aiogram import Router, html
 from aiogram.filters import CommandStart, Command
 from aiogram.types import Message
 
-from database import Database
+from database import db
 
 router = Router()
-db = Database()
 
 
 @router.message(CommandStart())

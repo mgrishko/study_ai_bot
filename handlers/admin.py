@@ -2,7 +2,7 @@ from aiogram import Router, html, F
 from aiogram.filters import Command
 from aiogram.types import Message, CallbackQuery
 
-from database import Database
+from database import db
 from filters import IsAdminFilter
 from keyboards import (
     get_admin_main_keyboard,
@@ -12,7 +12,6 @@ from keyboards import (
 )
 
 router = Router()
-db = Database()
 
 
 @router.message(Command("admin"), IsAdminFilter())

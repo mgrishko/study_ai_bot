@@ -6,18 +6,16 @@ from dotenv import load_dotenv
 # Завантажуємо .env файл
 load_dotenv()
 
-# Налаштування для тестів - використовуємо тестову БД
-# ВАЖЛИВО: Встановити змінні окружено ДО імпорту будь-яких модулів, які їх використовують
-os.environ['DB_HOST'] = os.getenv('TEST_DB_HOST', 'localhost')
-os.environ['DB_PORT'] = os.getenv('TEST_DB_PORT', '5432')
-os.environ['DB_USER'] = os.getenv('TEST_DB_USER', 'test_shop_bot_user')
-os.environ['DB_PASSWORD'] = os.getenv('TEST_DB_PASSWORD', '')
-os.environ['DB_NAME'] = os.getenv('TEST_DB_NAME', 'test_shop_bot')
+# ВАЖЛИВО: Встановити змінні окружено ДО імпорту будь-яких модулів
+os.environ['TEST_DB_HOST'] = os.getenv('TEST_DB_HOST', 'localhost')
+os.environ['TEST_DB_PORT'] = os.getenv('TEST_DB_PORT', '5432')
+os.environ['TEST_DB_USER'] = os.getenv('TEST_DB_USER', 'test_shop_bot_user')
+os.environ['TEST_DB_PASSWORD'] = os.getenv('TEST_DB_PASSWORD', '')
+os.environ['TEST_DB_NAME'] = os.getenv('TEST_DB_NAME', 'test_shop_bot')
 os.environ['BOT_TOKEN'] = os.getenv('BOT_TOKEN', 'test_token')
 os.environ['ADMIN_IDS'] = os.getenv('ADMIN_IDS', '')
 
-# Видалити модулі config та database з sys.modules, якщо вони були імпортовані раніше
-# Це дозволить їм переімпортуватися з новими змінними окружено
+# Видалити модулі config та database з sys.modules для переімпорту
 for module in list(sys.modules.keys()):
     if module.startswith('config') or module.startswith('database'):
         del sys.modules[module]
@@ -25,6 +23,7 @@ for module in list(sys.modules.keys()):
 import pytest
 import asyncio
 import pytest_asyncio
+from config import get_db_config, IS_TESTING
 from database import Database
 
 
@@ -47,6 +46,11 @@ def event_loop():
 async def db():
     """Фікстура для бази даних."""
     db_instance = Database()
+    
+    # Перевірка, що використовується тестова БД
+    assert db_instance.config["database"] == "test_shop_bot", \
+        f"❌ Неправильна БД: {db_instance.config['database']}"
+    
     await db_instance.connect()
     await db_instance.init_db()
     yield db_instance

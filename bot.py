@@ -7,15 +7,12 @@ from aiogram.client.default import DefaultBotProperties
 from aiogram.enums import ParseMode
 
 from config import BOT_TOKEN
-from database import Database
+from database import db
 from handlers import common_router, user_router, admin_router
 
 # Налаштування логування
 logging.basicConfig(level=logging.INFO, stream=sys.stdout)
 logger = logging.getLogger(__name__)
-
-# Ініціалізація бази даних
-db = Database()
 
 
 async def main() -> None:
@@ -24,9 +21,14 @@ async def main() -> None:
         logger.error("Помилка: BOT_TOKEN не знайдено в .env файлі!")
         return
 
-    # Ініціалізація бази даних
-    await db.init_db()
-    logger.info("База даних ініціалізована!")
+    try:
+        # Підключення та ініціалізація бази даних
+        await db.connect()
+        await db.init_db()
+        logger.info("База даних ініціалізована успішно!")
+    except Exception as e:
+        logger.error(f"Помилка при ініціалізації БД: {e}")
+        return
 
     # Ініціалізація бота та диспетчера
     bot = Bot(token=BOT_TOKEN, default=DefaultBotProperties(parse_mode=ParseMode.HTML))

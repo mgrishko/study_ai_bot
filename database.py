@@ -1,7 +1,7 @@
 import asyncpg
 from datetime import datetime
 from typing import List, Optional, Dict
-from os import getenv
+from config import get_db_config
 
 
 class Database:
@@ -9,15 +9,16 @@ class Database:
     
     def __init__(self):
         self.pool: Optional[asyncpg.Pool] = None
+        self.config = get_db_config()
     
     async def connect(self):
         """Створення пулу підключень до PostgreSQL."""
         self.pool = await asyncpg.create_pool(
-            host=getenv("DB_HOST", "localhost"),
-            port=int(getenv("DB_PORT", "5432")),
-            user=getenv("DB_USER", "postgres"),
-            password=getenv("DB_PASSWORD", ""),
-            database=getenv("DB_NAME", "shop_bot"),
+            host=self.config["host"],
+            port=self.config["port"],
+            user=self.config["user"],
+            password=self.config["password"],
+            database=self.config["database"],
             min_size=1,
             max_size=10
         )
@@ -29,8 +30,12 @@ class Database:
     
     async def init_db(self):
         """Ініціалізація бази даних та створення таблиць."""
+        # Переконуємось, що є підключення до БД
         if not self.pool:
             await self.connect()
+        
+        if not self.pool:
+            raise RuntimeError("Не вдалося створити пул підключень до БД")
         
         async with self.pool.acquire() as conn:
             # Таблиця товарів
@@ -189,3 +194,7 @@ class Database:
         async with self.pool.acquire() as conn:
             rows = await conn.fetch("SELECT DISTINCT category FROM products WHERE stock > 0 ORDER BY category")
             return [row['category'] for row in rows]
+
+
+# Глобальний екземпляр бази даних
+db = Database()

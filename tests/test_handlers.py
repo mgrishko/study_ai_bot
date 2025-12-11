@@ -22,8 +22,12 @@ def mock_message(test_user):
 async def test_command_start_handler(mock_message, db):
     """Тест команди /start з реальною БД та тестовим користувачем."""
     # Імпортуємо db та замінюємо в handlers.common
+    import database
+    original_db = database.db
+    database.db = db
+    
+    # Також імпортуємо обробник модуль
     import handlers.common
-    original_db = handlers.common.db
     handlers.common.db = db
     
     try:
@@ -44,6 +48,7 @@ async def test_command_start_handler(mock_message, db):
         assert user['first_name'] == mock_message.from_user.first_name
     finally:
         # Відновлюємо оригінальне db
+        database.db = original_db
         handlers.common.db = original_db
 
 
