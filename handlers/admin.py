@@ -1,6 +1,12 @@
+import logging
+from typing import Optional, Any
+
 from aiogram import Router, html, F
 from aiogram.filters import Command
 from aiogram.types import Message, CallbackQuery
+from aiogram.fsm.context import FSMContext
+from aiogram.fsm.state import State, StatesGroup
+from aiogram.utils.keyboard import InlineKeyboardBuilder
 
 from database import db
 from filters import IsAdminFilter
@@ -11,7 +17,21 @@ from keyboards import (
     get_order_status_keyboard
 )
 
+logger = logging.getLogger(__name__)
+
 router = Router()
+
+
+# FSM States для добавления товара
+class AddProductStates(StatesGroup):
+    """Состояния FSM для добавления нового товара."""
+    waiting_for_name = State()           # Шаг 1: название
+    waiting_for_description = State()    # Шаг 2: описание
+    waiting_for_price = State()          # Шаг 3: цена
+    waiting_for_category = State()       # Шаг 4: категория
+    waiting_for_stock = State()          # Шаг 5: количество
+    waiting_for_image_url = State()      # Шаг 6: URL изображения
+    waiting_for_confirmation = State()   # Шаг 7: подтверждение
 
 
 @router.message(Command("admin"), IsAdminFilter())
@@ -241,3 +261,301 @@ async def admin_users_callback(callback: CallbackQuery) -> None:
     
     await callback.message.edit_text(users_text, reply_markup=get_admin_main_keyboard())
     await callback.answer()
+
+
+# ═════════════════════════════════════════════════════════════════════════════
+# HANDLERS ДЛЯ ДОБАВЛЕНИЯ ТОВАРА (FSM)
+# ═════════════════════════════════════════════════════════════════════════════
+
+
+@router.callback_query(F.data == "admin_add_product", IsAdminFilter())
+async def admin_add_product_start(query: CallbackQuery, state: FSMContext) -> None:
+    """Начало процесса добавления товара."""
+    logger.info(f"Admin {query.from_user.id} started adding product")
+    await state.set_state(AddProductStates.waiting_for_name)
+    await query.message.edit_text("📝 Введіть назву товару (макс 255 символів):")
+    await query.answer()
+
+
+@router.message(AddProductStates.waiting_for_name)
+async def process_product_name(message: Message, state: FSMContext) -> None:
+    """Обработка названия товара."""
+    if len(message.text) > 255:
+        await message.answer("❌ Назва товару занадто довга (макс 255 символів)")
+        return
+    
+    await state.update_data(name=message.text)
+    await state.set_state(AddProductStates.waiting_for_description)
+    await message.answer("📝 Введіть опис товару (макс 1000 символів):")
+
+
+@router.message(AddProductStates.waiting_for_description)
+async def process_product_description(message: Message, state: FSMContext) -> None:
+    """Обработка описания товара."""
+    if len(message.text) > 1000:
+        await message.answer("❌ Опис занадто довгий (макс 1000 символів)")
+        return
+    
+    await state.update_data(description=message.text)
+    await state.set_state(AddProductStates.waiting_for_price)
+    await message.answer("💰 Введіть ціну товару (в гривнях, наприклад 2500.50):")
+
+
+@router.message(AddProductStates.waiting_for_price)
+async def process_product_price(message: Message, state: FSMContext) -> None:
+    """Обработка цены товара."""
+    try:
+        price = float(message.text)
+        if price <= 0:
+            await message.answer("❌ Ціна повинна бути більше 0")
+            return
+        if price > 999999:
+            await message.answer("❌ Ціна занадто висока (макс 999999 грн)")
+            return
+        
+        await state.update_data(price=price)
+        
+        # Получаем категории для выбора
+        categories = await db.get_categories()
+        if not categories:
+            await message.answer("❌ Немає категорій. Спочатку додайте категорію в БД.")
+            await state.clear()
+            logger.warning(f"No categories available when adding product")
+            return
+        
+        await state.set_state(AddProductStates.waiting_for_category)
+        
+        # Создаем клавиатуру с категориями
+        builder = InlineKeyboardBuilder()
+        for category in categories:
+            builder.button(
+                text=f"📂 {category}",
+                callback_data=f"select_category:{category}"
+            )
+        builder.adjust(2)
+        
+        await message.answer(
+            "📂 Виберіть категорію:",
+            reply_markup=builder.as_markup()
+        )
+    except ValueError:
+        await message.answer("❌ Введіть дійсну ціну (число, наприклад 2500 або 2500.50)")
+
+
+@router.callback_query(AddProductStates.waiting_for_category, F.data.startswith("select_category:"))
+async def process_product_category(query: CallbackQuery, state: FSMContext) -> None:
+    """Обработка выбора категории товара."""
+    category = query.data.split(":", 1)[1]
+    await state.update_data(category=category)
+    await state.set_state(AddProductStates.waiting_for_stock)
+    await query.message.edit_text("📦 Введіть кількість товару на складі (число):")
+    await query.answer()
+
+
+@router.message(AddProductStates.waiting_for_stock)
+async def process_product_stock(message: Message, state: FSMContext) -> None:
+    """Обработка количества товара."""
+    try:
+        stock = int(message.text)
+        if stock < 0:
+            await message.answer("❌ Кількість не може бути від'ємною")
+            return
+        if stock > 100000:
+            await message.answer("❌ Кількість занадто велика (макс 100000)")
+            return
+        
+        await state.update_data(stock=stock)
+        await state.set_state(AddProductStates.waiting_for_image_url)
+        await message.answer("🖼️ Введіть URL зображення товару (або напишіть 'skip' щоб пропустити):")
+    except ValueError:
+        await message.answer("❌ Введіть дійсну кількість (число)")
+
+
+@router.message(AddProductStates.waiting_for_image_url)
+async def process_product_image(message: Message, state: FSMContext) -> None:
+    """Обработка URL изображения товара."""
+    image_url = None if message.text.lower() == "skip" else message.text
+    
+    if image_url and not (image_url.startswith("http://") or image_url.startswith("https://")):
+        await message.answer("❌ URL повинен починатися з http:// або https://")
+        return
+    
+    await state.update_data(image_url=image_url)
+    await state.set_state(AddProductStates.waiting_for_confirmation)
+    
+    # Показываем подтверждение
+    data = await state.get_data()
+    confirmation_text = (
+        f"✅ {html.bold('Перевірте дані товару:')}\n\n"
+        f"📝 Назва: {data['name']}\n"
+        f"📄 Опис: {data['description']}\n"
+        f"💰 Ціна: {data['price']:.2f} грн\n"
+        f"📂 Категорія: {data['category']}\n"
+        f"📦 Кількість: {data['stock']} шт\n"
+        f"🖼️ Зображення: {'Так' if data['image_url'] else 'Ні'}\n\n"
+        f"{html.bold('Додати товар?')}"
+    )
+    
+    builder = InlineKeyboardBuilder()
+    builder.button(text="✅ Так, додати", callback_data="confirm_add_product")
+    builder.button(text="❌ Ні, скасувати", callback_data="cancel_add_product")
+    builder.adjust(2)
+    
+    await message.answer(confirmation_text, reply_markup=builder.as_markup())
+
+
+@router.callback_query(AddProductStates.waiting_for_confirmation, F.data == "confirm_add_product")
+async def confirm_add_product(query: CallbackQuery, state: FSMContext) -> None:
+    """Подтверждение и сохранение нового товара."""
+    try:
+        data = await state.get_data()
+        
+        product_id = await db.add_product(
+            name=data['name'],
+            description=data['description'],
+            price=data['price'],
+            category=data['category'],
+            stock=data['stock'],
+            image_url=data['image_url']
+        )
+        
+        if product_id:
+            logger.info(f"Admin {query.from_user.id} added product: {data['name']} (ID: {product_id})")
+            await query.message.edit_text(
+                f"✅ {html.bold('Товар успішно додано!')}\n\n"
+                f"ID товару: {product_id}\n"
+                f"Назва: {data['name']}\n"
+                f"Ціна: {data['price']:.2f} грн",
+                reply_markup=get_admin_main_keyboard()
+            )
+        else:
+            await query.message.edit_text(
+                "❌ Помилка при додаванні товару. Спробуйте пізніше.",
+                reply_markup=get_admin_main_keyboard()
+            )
+        
+        await query.answer()
+        await state.clear()
+    except Exception as e:
+        logger.exception(f"Error adding product: {e}")
+        await query.message.edit_text(
+            f"❌ Помилка: {str(e)}",
+            reply_markup=get_admin_main_keyboard()
+        )
+        await query.answer()
+        await state.clear()
+
+
+@router.callback_query(AddProductStates.waiting_for_confirmation, F.data == "cancel_add_product")
+async def cancel_add_product(query: CallbackQuery, state: FSMContext) -> None:
+    """Отмена добавления товара."""
+    await state.clear()
+    await query.message.edit_text(
+        "❌ Додавання товару скасовано.",
+        reply_markup=get_admin_main_keyboard()
+    )
+    await query.answer()
+
+
+# ═════════════════════════════════════════════════════════════════════════════
+# HANDLERS ДЛЯ УДАЛЕНИЯ ТОВАРА
+# ═════════════════════════════════════════════════════════════════════════════
+
+
+@router.callback_query(F.data == "admin_delete_products", IsAdminFilter())
+async def admin_delete_products_menu(query: CallbackQuery) -> None:
+    """Показывает список товаров для удаления."""
+    logger.info(f"Admin {query.from_user.id} opened product deletion menu")
+    
+    products = await db.get_all_products()
+    
+    if not products:
+        await query.message.edit_text(
+            "❌ Товарів немає.",
+            reply_markup=get_admin_products_keyboard()
+        )
+        await query.answer()
+        return
+    
+    # Показываем товары для удаления (максимум 15 товаров в одном сообщении)
+    text = f"❌ {html.bold('Виберіть товар для видалення:')}\n\n"
+    
+    builder = InlineKeyboardBuilder()
+    for product in products[:15]:
+        builder.button(
+            text=f"❌ {product['name']} ({product['stock']} шт) - {float(product['price']):.0f} грн",
+            callback_data=f"delete_product:{product['id']}"
+        )
+    
+    builder.button(text="◀️ Назад", callback_data="admin_products")
+    builder.adjust(1)
+    
+    await query.message.edit_text(text, reply_markup=builder.as_markup())
+    await query.answer()
+
+
+@router.callback_query(F.data.startswith("delete_product:"), IsAdminFilter())
+async def confirm_delete_product(query: CallbackQuery) -> None:
+    """Подтверждение удаления товара."""
+    try:
+        product_id = int(query.data.split(":")[1])
+        product = await db.get_product_by_id(product_id)
+        
+        if not product:
+            await query.message.edit_text(
+                "❌ Товар не знайдено.",
+                reply_markup=get_admin_products_keyboard()
+            )
+            await query.answer()
+            return
+        
+        confirmation_text = (
+            f"⚠️ {html.bold('ПІДТВЕРДЖЕННЯ ВИДАЛЕННЯ')}\n\n"
+            f"Товар: {product['name']}\n"
+            f"Ціна: {float(product['price']):.2f} грн\n"
+            f"Кількість: {product['stock']} шт\n\n"
+            f"{html.italic('Ви впевнені що хочете видалити цей товар?')}\n"
+            f"{html.italic('Це дійство не можна скасувати!')}"
+        )
+        
+        builder = InlineKeyboardBuilder()
+        builder.button(text="✅ Так, видалити", callback_data=f"confirm_delete_product:{product_id}")
+        builder.button(text="❌ Ні, скасувати", callback_data="admin_delete_products")
+        builder.adjust(2)
+        
+        await query.message.edit_text(confirmation_text, reply_markup=builder.as_markup())
+        await query.answer()
+    except Exception as e:
+        logger.exception(f"Error in delete confirmation: {e}")
+        await query.answer("❌ Помилка при обробці запиту", show_alert=True)
+
+
+@router.callback_query(F.data.startswith("confirm_delete_product:"), IsAdminFilter())
+async def execute_delete_product(query: CallbackQuery) -> None:
+    """Удаляет товар из БД."""
+    try:
+        product_id = int(query.data.split(":")[1])
+        product = await db.get_product_by_id(product_id)
+        
+        success = await db.delete_product(product_id)
+        
+        if success:
+            logger.info(f"Admin {query.from_user.id} deleted product: {product['name']} (ID: {product_id})")
+            await query.message.edit_text(
+                f"✅ Товар '{product['name']}' успішно видалено!",
+                reply_markup=get_admin_products_keyboard()
+            )
+        else:
+            await query.message.edit_text(
+                "❌ Помилка при видаленні товару.",
+                reply_markup=get_admin_products_keyboard()
+            )
+        
+        await query.answer()
+    except Exception as e:
+        logger.exception(f"Error deleting product: {e}")
+        await query.message.edit_text(
+            f"❌ Помилка: {str(e)}",
+            reply_markup=get_admin_products_keyboard()
+        )
+        await query.answer()

@@ -164,3 +164,111 @@ class TestDatabase:
                     "SELECT * FROM orders WHERE id = $1", order_id
                 )
                 assert order['status'] == "confirmed"
+    
+    @pytest.mark.asyncio
+    async def test_add_product(self, db):
+        """Тест додавання нового товару."""
+        import time
+        product_name = f"Test Product {int(time.time() * 1000)}"
+        
+        product_id = await db.add_product(
+            name=product_name,
+            description="Test product description",
+            price=999.99,
+            category="Тестова категорія",
+            stock=42,
+            image_url="https://example.com/image.jpg"
+        )
+        
+        assert product_id is not None
+        assert isinstance(product_id, int)
+        
+        # Перевіряємо, що товар додано
+        product = await db.get_product_by_id(product_id)
+        assert product is not None
+        assert product['name'] == product_name
+        assert float(product['price']) == 999.99
+        assert product['stock'] == 42
+        assert product['image_url'] == "https://example.com/image.jpg"
+    
+    @pytest.mark.asyncio
+    async def test_add_product_without_image(self, db):
+        """Тест додавання товару без зображення."""
+        import time
+        product_name = f"Test Product No Image {int(time.time() * 1000)}"
+        
+        product_id = await db.add_product(
+            name=product_name,
+            description="Product without image",
+            price=500.00,
+            category="Тестова категорія",
+            stock=10
+        )
+        
+        assert product_id is not None
+        product = await db.get_product_by_id(product_id)
+        assert product['image_url'] is None
+    
+    @pytest.mark.asyncio
+    async def test_update_product(self, db):
+        """Тест оновлення товару."""
+        import time
+        product_name = f"Update Test {int(time.time() * 1000)}"
+        
+        # Додаємо товар
+        product_id = await db.add_product(
+            name=product_name,
+            description="Original description",
+            price=100.00,
+            category="Тестова категорія",
+            stock=5
+        )
+        
+        # Оновлюємо товар
+        result = await db.update_product(
+            product_id=product_id,
+            name="Updated Name",
+            price=200.00,
+            stock=10
+        )
+        
+        assert result is True
+        
+        # Перевіряємо оновлені дані
+        product = await db.get_product_by_id(product_id)
+        assert product['name'] == "Updated Name"
+        assert float(product['price']) == 200.00
+        assert product['stock'] == 10
+        assert product['description'] == "Original description"  # Не змінювався
+    
+    @pytest.mark.asyncio
+    async def test_delete_product(self, db):
+        """Тест видалення товару."""
+        import time
+        product_name = f"Delete Test {int(time.time() * 1000)}"
+        
+        # Додаємо товар
+        product_id = await db.add_product(
+            name=product_name,
+            description="Will be deleted",
+            price=150.00,
+            category="Тестова категорія",
+            stock=3
+        )
+        
+        assert product_id is not None
+        
+        # Видаляємо товар
+        result = await db.delete_product(product_id)
+        assert result is True
+        
+        # Перевіряємо, що товар видалено
+        product = await db.get_product_by_id(product_id)
+        assert product is None
+    
+    @pytest.mark.asyncio
+    async def test_delete_nonexistent_product(self, db):
+        """Тест видалення неіснуючого товару."""
+        result = await db.delete_product(99999)
+        assert result is False
+

@@ -1,7 +1,10 @@
 import asyncpg
+import logging
 from datetime import datetime
-from typing import List, Optional, Dict
+from typing import List, Optional, Dict, Any
 from config import get_db_config
+
+logger = logging.getLogger(__name__)
 
 
 class Database:
@@ -194,6 +197,107 @@ class Database:
         async with self.pool.acquire() as conn:
             rows = await conn.fetch("SELECT DISTINCT category FROM products WHERE stock > 0 ORDER BY category")
             return [row['category'] for row in rows]
+    
+    async def add_product(
+        self, 
+        name: str, 
+        description: str, 
+        price: float, 
+        category: str, 
+        stock: int,
+        image_url: Optional[str] = None
+    ) -> Optional[int]:
+        """Додає новий товар в каталог.
+        
+        Args:
+            name: Назва товару (макс 255 символів)
+            description: Опис товару (макс 1000 символів)
+            price: Ціна товару в гривнях
+            category: Категорія товару
+            stock: Кількість на складі
+            image_url: URL зображення товару (опціонально)
+        
+        Returns:
+            ID нового товару або None при помилці
+        """
+        try:
+            query = """
+                INSERT INTO products (name, description, price, category, stock, image_url)
+                VALUES ($1, $2, $3, $4, $5, $6)
+                RETURNING id
+            """
+            async with self.pool.acquire() as conn:
+                product_id = await conn.fetchval(query, name, description, price, category, stock, image_url)
+            
+            logger.info(f"Product added: {name} (ID: {product_id})")
+            return product_id
+        except Exception as e:
+            logger.exception(f"Error adding product: {e}")
+            return None
+    
+    async def update_product(
+        self, 
+        product_id: int, 
+        **kwargs: Any
+    ) -> bool:
+        """Оновлює товар (name, description, price, category, stock, image_url).
+        
+        Args:
+            product_id: ID товару для оновлення
+            **kwargs: Поля для оновлення (name, description, price, category, stock, image_url)
+        
+        Returns:
+            True якщо успішно оновлено, False інакше
+        """
+        try:
+            allowed_fields = {'name', 'description', 'price', 'category', 'stock', 'image_url'}
+            update_fields = {k: v for k, v in kwargs.items() if k in allowed_fields}
+            
+            if not update_fields:
+                logger.warning(f"No valid fields to update for product {product_id}")
+                return False
+            
+            set_clause = ", ".join(f"{k} = ${i+1}" for i, k in enumerate(update_fields.keys()))
+            query = f"UPDATE products SET {set_clause} WHERE id = ${len(update_fields)+1}"
+            
+            async with self.pool.acquire() as conn:
+                result = await conn.execute(query, *update_fields.values(), product_id)
+            
+            if result == "UPDATE 1":
+                logger.info(f"Product {product_id} updated: {update_fields}")
+                return True
+            return False
+        except Exception as e:
+            logger.exception(f"Error updating product: {e}")
+            return False
+    
+    async def delete_product(self, product_id: int) -> bool:
+        """Видаляє товар з каталогу.
+        
+        Args:
+            product_id: ID товару для видалення
+        
+        Returns:
+            True якщо успішно видалено, False інакше
+        """
+        try:
+            # Спочатку отримуємо назву товару для логування
+            product = await self.get_product_by_id(product_id)
+            if not product:
+                logger.warning(f"Product {product_id} not found for deletion")
+                return False
+            
+            async with self.pool.acquire() as conn:
+                # Видаляємо товар
+                result = await conn.execute("DELETE FROM products WHERE id = $1", product_id)
+            
+            if result == "DELETE 1":
+                logger.info(f"Product deleted: {product['name']} (ID: {product_id})")
+                return True
+            return False
+        except Exception as e:
+            logger.exception(f"Error deleting product: {e}")
+            return False
 
 
 # Глобальний екземпляр бази даних
