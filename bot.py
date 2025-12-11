@@ -1,6 +1,5 @@
 import asyncio
 import logging
-import sys
 
 from aiogram import Bot, Dispatcher
 from aiogram.client.default import DefaultBotProperties
@@ -10,9 +9,8 @@ from config import BOT_TOKEN
 from database import db
 from handlers import common_router, user_router, admin_router, ai_router
 from openai_service import init_openai
+from middleware import MessageLoggerMiddleware, CallbackLoggerMiddleware
 
-# Налаштування логування
-logging.basicConfig(level=logging.INFO, stream=sys.stdout)
 logger = logging.getLogger(__name__)
 
 
@@ -42,6 +40,10 @@ async def main() -> None:
     # Ініціалізація бота та диспетчера
     bot = Bot(token=BOT_TOKEN, default=DefaultBotProperties(parse_mode=ParseMode.HTML))
     dp = Dispatcher()
+
+    # Реєстрація middleware для логирования запросов
+    dp.message.middleware(MessageLoggerMiddleware())
+    dp.callback_query.middleware(CallbackLoggerMiddleware())
 
     # Реєстрація роутерів
     dp.include_router(common_router)
