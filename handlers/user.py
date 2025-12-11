@@ -13,7 +13,10 @@ from keyboards import (
     get_admin_menu
 )
 from config import ADMIN_IDS
+from tts_service import text_to_speech, get_product_description_for_tts
+from logger_config import get_logger
 
+logger = get_logger("aiogram.handlers")
 router = Router()
 
 
@@ -212,6 +215,43 @@ async def command_my_orders_handler(message: Message) -> None:
 
 
 # =============== CALLBACK ОБРОБНИКИ ===============
+
+@router.callback_query(F.data.startswith("listen_product:"))
+async def listen_product_callback(callback: CallbackQuery) -> None:
+    """Обработчик для озвучивания описания товара."""
+    try:
+        product_id = int(callback.data.split(":")[1])
+        product = await db.get_product_by_id(product_id)
+        
+        if not product:
+            await callback.answer("❌ Товар не найден", show_alert=True)
+            return
+        
+        # Показываем статус обработки
+        await callback.answer("🔊 Генерирую аудиофайл...")
+        
+        # Подготавливаем текст для озвучивания
+        tts_text = get_product_description_for_tts(product)
+        
+        # Генерируем аудиофайл
+        audio_buffer = await text_to_speech(tts_text, language="uk")
+        
+        if audio_buffer:
+            # Отправляем аудиофайл
+            await callback.message.answer_voice(
+                voice=audio_buffer,
+                caption=f"🔊 Информация о товаре '{product['name']}'"
+            )
+            logger.info(f"Product audio sent for product_id={product_id}")
+        else:
+            await callback.message.answer(
+                "❌ Ошибка при генерации аудио. Попробуйте позже."
+            )
+        
+    except Exception as e:
+        logger.error(f"Error in listen_product_callback: {e}", exc_info=True)
+        await callback.answer("❌ Ошибка при обработке запроса", show_alert=True)
+
 
 @router.callback_query(F.data.startswith("product:"))
 async def product_details_callback(callback: CallbackQuery) -> None:

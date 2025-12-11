@@ -30,6 +30,10 @@ def get_product_details_keyboard(product_id):
     """Створює клавіатуру для деталей товару."""
     builder = InlineKeyboardBuilder()
     builder.button(
+        text="🔊 Прослухати опис",
+        callback_data=f"listen_product:{product_id}"
+    )
+    builder.button(
         text="🛒 Замовити",
         callback_data=f"order_product:{product_id}"
     )
