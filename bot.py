@@ -8,7 +8,8 @@ from aiogram.enums import ParseMode
 
 from config import BOT_TOKEN
 from database import db
-from handlers import common_router, user_router, admin_router
+from handlers import common_router, user_router, admin_router, ai_router
+from openai_service import init_openai
 
 # Налаштування логування
 logging.basicConfig(level=logging.INFO, stream=sys.stdout)
@@ -30,6 +31,14 @@ async def main() -> None:
         logger.error(f"Помилка при ініціалізації БД: {e}")
         return
 
+    # Ініціалізація OpenAI
+    try:
+        init_openai()
+        logger.info("OpenAI клієнт ініціалізовано успішно!")
+    except Exception as e:
+        logger.warning(f"Помилка при ініціалізації OpenAI: {e}")
+        logger.warning("Команда /generate буде недоступна")
+
     # Ініціалізація бота та диспетчера
     bot = Bot(token=BOT_TOKEN, default=DefaultBotProperties(parse_mode=ParseMode.HTML))
     dp = Dispatcher()
@@ -38,6 +47,7 @@ async def main() -> None:
     dp.include_router(common_router)
     dp.include_router(user_router)
     dp.include_router(admin_router)
+    dp.include_router(ai_router)
 
     # Запуск бота
     logger.info("Бот запущено!")

@@ -7,6 +7,9 @@ load_dotenv()
 # Токен бота
 BOT_TOKEN = getenv("BOT_TOKEN")
 
+# OpenAI API Token
+OPEN_AI_TOKEN = getenv("OPEN_AI_TOKEN", "")
+
 # Налаштування бази даних (розробка)
 DB_HOST = getenv("DB_HOST", "localhost")
 DB_PORT = int(getenv("DB_PORT", "5432"))

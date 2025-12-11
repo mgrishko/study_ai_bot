@@ -4,7 +4,7 @@
 
 ## Вимоги
 
-- Python 3.14
+- Python 3.13
 - PostgreSQL 12+
 - Aiogram 3.15.0
 - asyncpg 0.30.0
@@ -39,7 +39,7 @@ aiogram_project/
 
 1. Створіть віртуальне середовище:
 ```bash
-python3.14 -m venv venv
+python3.13 -m venv venv
 source venv/bin/activate
 ```
 

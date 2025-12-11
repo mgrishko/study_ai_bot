@@ -75,5 +75,5 @@ async def test_command_info_handler(mock_message):
     
     call_args = mock_message.answer.call_args[0][0]
     assert "Інформація про бота" in call_args
-    assert "Python 3.14" in call_args
+    assert "Python 3.13" in call_args
     assert "PostgreSQL" in call_args
