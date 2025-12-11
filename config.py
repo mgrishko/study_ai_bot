@@ -1,23 +1,12 @@
 import sys
-import logging
 from os import getenv
 from dotenv import load_dotenv
+from logger_config import setup_logging
 
 load_dotenv()
 
-# Налаштування логування (в стилі Rails)
-LOG_FORMAT = '%(asctime)s [%(name)s] %(levelname)s: %(message)s'
-LOG_DATE_FORMAT = '%Y-%m-%d %H:%M:%S'
-
-logging.basicConfig(
-    level=logging.INFO,
-    format=LOG_FORMAT,
-    datefmt=LOG_DATE_FORMAT
-)
-
-# Додаткові логери
-logging.getLogger("aiogram.requests").setLevel(logging.INFO)
-logging.getLogger("aiogram.database").setLevel(logging.INFO)
+# Инициализация логирования
+setup_logging()
 
 # Токен бота
 BOT_TOKEN = getenv("BOT_TOKEN")

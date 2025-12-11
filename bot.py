@@ -1,5 +1,4 @@
 import asyncio
-import logging
 
 from aiogram import Bot, Dispatcher
 from aiogram.client.default import DefaultBotProperties
@@ -10,8 +9,9 @@ from database import db
 from handlers import common_router, user_router, admin_router, ai_router
 from openai_service import init_openai
 from middleware import MessageLoggerMiddleware, CallbackLoggerMiddleware
+from logger_config import get_logger
 
-logger = logging.getLogger(__name__)
+logger = get_logger("bot")
 
 
 async def main() -> None:

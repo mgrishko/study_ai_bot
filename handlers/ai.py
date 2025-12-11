@@ -1,6 +1,5 @@
 """Обробники команд для роботи з AI (генерація зображень)."""
 
-import logging
 from typing import Optional
 
 from aiogram import Router, F, html
@@ -11,8 +10,9 @@ from aiogram.fsm.state import State, StatesGroup
 from aiogram.utils.keyboard import InlineKeyboardBuilder
 
 from openai_service import generate_image, get_available_sizes, get_available_styles
+from logger_config import get_logger
 
-logger = logging.getLogger(__name__)
+logger = get_logger("aiogram.handlers")
 
 router = Router()
 

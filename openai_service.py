@@ -1,12 +1,12 @@
 """Сервіс для роботи з OpenAI API (DALL-E 3)."""
 
-import logging
 from typing import Optional
 
 from openai import AsyncOpenAI, APIError, RateLimitError
 from config import OPEN_AI_TOKEN
+from logger_config import get_logger
 
-logger = logging.getLogger(__name__)
+logger = get_logger("openai.service")
 
 # Глобальний екземпляр клієнта OpenAI
 openai_client: Optional[AsyncOpenAI] = None

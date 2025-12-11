@@ -1,10 +1,10 @@
 import asyncpg
-import logging
 from datetime import datetime
 from typing import List, Optional, Dict, Any
 from config import get_db_config
+from logger_config import get_logger
 
-logger = logging.getLogger(__name__)
+logger = get_logger("aiogram.database")
 
 
 class Database:

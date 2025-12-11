@@ -100,6 +100,43 @@ python bot.py
 
 При першому запуску автоматично створюються таблиці та додаються початкові товари.
 
+## Логирование
+
+Проект использует встроенную библиотеку `logging` с профессиональной конфигурацией в стиле Rails:
+
+### Структура логирования
+
+- **logs/bot.log** - все логи приложения (с ротацией 10MB, 5 бэкапов)
+- **logs/errors.log** - только ошибки и исключения
+
+### Формат логов
+
+```
+2025-12-11 13:30:07 [aiogram.database] INFO: Product added: Test Product (ID: 41)
+2025-12-11 13:30:13 [aiogram.requests] INFO: [REQUEST] command:/start user_id=207126754
+2025-12-11 13:30:13 [aiogram.requests] INFO: [RESPONSE] command:/start user_id=207126754 completed in 0.045s
+```
+
+### Уровни логирования по модулям
+
+- **aiogram.requests** - запросы и responses (INFO)
+- **aiogram.database** - операции БД (INFO)
+- **aiogram.handlers** - обработчики команд (INFO)
+- **openai.service** - OpenAI операции (INFO)
+- **asyncpg** - library (WARNING)
+
+### Использование логирования в коде
+
+```python
+from logger_config import get_logger
+
+logger = get_logger("aiogram.handlers")
+
+logger.info("Команда /start выполнена")
+logger.warning("Ошибка при обработке запроса")
+logger.error("Критическая ошибка", exc_info=True)
+```
+
 ## Розробка
 
 Проект використовує модульну архітектуру з роутерами для кращої організації коду:
@@ -107,3 +144,4 @@ python bot.py
 - **Фільтри** - перевірка прав доступу
 - **Клавіатури** - винесені в окремі модулі
 - **Конфігурація** - централізоване управління налаштуваннями
+- **Логирование** - профессиональное логирование всех операций

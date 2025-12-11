@@ -1,4 +1,3 @@
-import logging
 from typing import Optional, Any
 
 from aiogram import Router, html, F
@@ -10,6 +9,7 @@ from aiogram.utils.keyboard import InlineKeyboardBuilder
 
 from database import db
 from filters import IsAdminFilter
+from logger_config import get_logger
 from keyboards import (
     get_admin_main_keyboard,
     get_admin_orders_keyboard,
@@ -17,7 +17,7 @@ from keyboards import (
     get_order_status_keyboard
 )
 
-logger = logging.getLogger(__name__)
+logger = get_logger("aiogram.handlers")
 
 router = Router()
 

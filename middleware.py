@@ -1,13 +1,13 @@
 """Middleware для логирования запросов (по аналогии с Rails)."""
 
-import logging
 import time
 from typing import Callable, Any, Awaitable
 
 from aiogram import BaseMiddleware
-from aiogram.types import Update, User, Message, CallbackQuery
+from aiogram.types import Message, CallbackQuery
+from logger_config import get_logger
 
-logger = logging.getLogger("aiogram.requests")
+logger_requests = get_logger("aiogram.requests")
 
 
 class MessageLoggerMiddleware(BaseMiddleware):
@@ -54,22 +54,23 @@ class MessageLoggerMiddleware(BaseMiddleware):
         if details_str:
             log_msg += f" {details_str}"
         
-        logger.info(log_msg)
+        logger_requests.info(log_msg)
 
         # Выполняем handler
         try:
             result = await handler(event, data)
             duration = time.time() - start_time
             
-            logger.info(
+            logger_requests.info(
                 f"[RESPONSE] {action} {user_info} completed in {duration:.3f}s"
             )
             
             return result
         except Exception as e:
             duration = time.time() - start_time
-            logger.error(
-                f"[ERROR] {action} {user_info} failed in {duration:.3f}s: {type(e).__name__}"
+            logger_requests.error(
+                f"[ERROR] {action} {user_info} failed in {duration:.3f}s: {type(e).__name__}",
+                exc_info=True
             )
             raise
 
@@ -96,21 +97,22 @@ class CallbackLoggerMiddleware(BaseMiddleware):
         details_str = " ".join(f"{k}={v}" for k, v in details.items())
         
         log_msg = f"[REQUEST] {action} {user_info} {details_str}"
-        logger.info(log_msg)
+        logger_requests.info(log_msg)
 
         # Выполняем handler
         try:
             result = await handler(event, data)
             duration = time.time() - start_time
             
-            logger.info(
+            logger_requests.info(
                 f"[RESPONSE] {action} {user_info} completed in {duration:.3f}s"
             )
             
             return result
         except Exception as e:
             duration = time.time() - start_time
-            logger.error(
-                f"[ERROR] {action} {user_info} failed in {duration:.3f}s: {type(e).__name__}"
+            logger_requests.error(
+                f"[ERROR] {action} {user_info} failed in {duration:.3f}s: {type(e).__name__}",
+                exc_info=True
             )
             raise
