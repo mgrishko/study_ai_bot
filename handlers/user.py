@@ -11,13 +11,15 @@ from keyboards import (
     get_order_confirmation_keyboard,
     get_my_orders_keyboard,
     get_main_menu,
-    get_admin_menu
+    get_admin_menu,
+    get_order_with_payment_keyboard
 )
 from filters import IsUserFilter, IsUserCallbackFilter
 from config import ADMIN_IDS
 from tts_service import text_to_speech, get_product_description_for_tts
 from logger_config import get_logger
 from handlers.order_states import OrderStates
+from handlers.payment_states import PaymentStates
 from validators import validate_phone, validate_email
 
 logger = get_logger("aiogram.handlers")
@@ -511,23 +513,27 @@ async def confirm_order_with_contact(message: Message, state: FSMContext) -> Non
                 f"📦 Кількість: {data['quantity']} шт.\n"
                 f"📱 Телефон: {data['phone']}\n"
                 f"📧 Email: {data['email']}\n\n"
-                f"Дякуємо за замовлення! Наш менеджер зв'яжеться з вами найближчим часом.\n\n"
-                f"Ви можете переглянути свої замовлення командою /myorders"
+                f"Виберіть спосіб оплати замовлення:"
             )
             
             logger.info(f"Order #{order_id} created with contact info - Phone: {data['phone']}, Email: {data['email']}")
             
+            # Store order_id in FSM context for payment flow
+            await state.update_data(order_id=order_id)
+            
+            # Move to payment state
+            await state.set_state(PaymentStates.waiting_for_payment_method)
+            
             await message.answer(
                 confirmation_text,
-                reply_markup=get_order_confirmation_keyboard()
+                reply_markup=get_order_with_payment_keyboard(order_id)
             )
         else:
             await message.answer(
                 "❌ Помилка оформлення замовлення. Можливо товар закінчився.",
                 reply_markup=get_order_confirmation_keyboard()
             )
-        
-        await state.clear()
+            await state.clear()
         
     except Exception as e:
         logger.error(f"Error in confirm_order_with_contact: {e}", exc_info=True)

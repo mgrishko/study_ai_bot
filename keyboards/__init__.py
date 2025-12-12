@@ -16,6 +16,12 @@ from keyboards.reply import (
     get_admin_menu,
     get_hidden_keyboard
 )
+from keyboards.payments import (
+    get_payment_method_keyboard,
+    get_payment_retry_keyboard,
+    get_liqpay_payment_keyboard,
+    get_order_with_payment_keyboard
+)
 
 __all__ = [
     "get_products_keyboard",
@@ -29,5 +35,9 @@ __all__ = [
     "get_order_status_keyboard",
     "get_main_menu",
     "get_admin_menu",
-    "get_hidden_keyboard"
+    "get_hidden_keyboard",
+    "get_payment_method_keyboard",
+    "get_payment_retry_keyboard",
+    "get_liqpay_payment_keyboard",
+    "get_order_with_payment_keyboard",
 ]

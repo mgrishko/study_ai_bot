@@ -67,8 +67,32 @@ class Database:
                     phone TEXT,
                     email TEXT,
                     status TEXT DEFAULT 'pending',
+                    payment_status TEXT DEFAULT 'unpaid',
+                    payment_method TEXT,
                     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                     FOREIGN KEY (product_id) REFERENCES products (id)
+                )
+            """)
+            
+            # Таблиця платежів
+            await conn.execute("""
+                CREATE TABLE IF NOT EXISTS payments (
+                    id SERIAL PRIMARY KEY,
+                    order_id INTEGER NOT NULL UNIQUE,
+                    user_id BIGINT NOT NULL,
+                    amount NUMERIC(10, 2) NOT NULL,
+                    currency TEXT DEFAULT 'UAH',
+                    payment_method TEXT NOT NULL,
+                    status TEXT DEFAULT 'pending',
+                    liqpay_payment_id TEXT,
+                    liqpay_order_id TEXT,
+                    telegram_payment_id TEXT,
+                    telegram_provider_payment_id TEXT,
+                    error_message TEXT,
+                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                    FOREIGN KEY (order_id) REFERENCES orders(id) ON DELETE CASCADE,
+                    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
                 )
             """)
             
@@ -441,6 +465,133 @@ class Database:
         except Exception as e:
             logger.error(f"Error resetting sequences: {e}", exc_info=True)
             raise
+    
+    # ═════════════════════════════════════════════════════════════════════════════
+    # PAYMENT METHODS
+    # ═════════════════════════════════════════════════════════════════════════════
+    
+    async def create_payment_record(self, order_id: int, user_id: int, amount: float,
+                                   payment_method: str, currency: str = "UAH") -> Optional[int]:
+        """
+        Create a payment record in the database.
+        
+        Args:
+            order_id: Order ID
+            user_id: Telegram user ID
+            amount: Payment amount
+            payment_method: Payment method ('liqpay' or 'telegram')
+            currency: Currency code (default 'UAH')
+        
+        Returns:
+            Payment ID or None if error
+        """
+        try:
+            async with self.pool.acquire() as conn:
+                payment_id = await conn.fetchval(
+                    """INSERT INTO payments (order_id, user_id, amount, currency, payment_method, status)
+                       VALUES ($1, $2, $3, $4, $5, 'pending') RETURNING id""",
+                    order_id, user_id, amount, currency, payment_method
+                )
+                return payment_id
+        except Exception as e:
+            logger.error(f"Error creating payment record: {e}", exc_info=True)
+            return None
+    
+    async def update_payment_status(self, payment_id: int, status: str,
+                                   liqpay_payment_id: str = None,
+                                   error_message: str = None) -> bool:
+        """
+        Update payment status.
+        
+        Args:
+            payment_id: Payment ID
+            status: New status ('pending', 'processing', 'completed', 'failed', 'cancelled')
+            liqpay_payment_id: LiqPay transaction ID (optional)
+            error_message: Error details if payment failed (optional)
+        
+        Returns:
+            True if successful, False otherwise
+        """
+        try:
+            async with self.pool.acquire() as conn:
+                await conn.execute(
+                    """UPDATE payments 
+                       SET status = $1, liqpay_payment_id = $2, error_message = $3, updated_at = CURRENT_TIMESTAMP
+                       WHERE id = $4""",
+                    status, liqpay_payment_id, error_message, payment_id
+                )
+                return True
+        except Exception as e:
+            logger.error(f"Error updating payment status: {e}", exc_info=True)
+            return False
+    
+    async def get_payment_by_order(self, order_id: int) -> Optional[Dict]:
+        """
+        Get payment record by order ID.
+        
+        Args:
+            order_id: Order ID
+        
+        Returns:
+            Payment record or None if not found
+        """
+        try:
+            async with self.pool.acquire() as conn:
+                row = await conn.fetchrow(
+                    "SELECT * FROM payments WHERE order_id = $1",
+                    order_id
+                )
+                return dict(row) if row else None
+        except Exception as e:
+            logger.error(f"Error getting payment by order: {e}", exc_info=True)
+            return None
+    
+    async def get_payment_by_id(self, payment_id: int) -> Optional[Dict]:
+        """
+        Get payment record by payment ID.
+        
+        Args:
+            payment_id: Payment ID
+        
+        Returns:
+            Payment record or None if not found
+        """
+        try:
+            async with self.pool.acquire() as conn:
+                row = await conn.fetchrow(
+                    "SELECT * FROM payments WHERE id = $1",
+                    payment_id
+                )
+                return dict(row) if row else None
+        except Exception as e:
+            logger.error(f"Error getting payment by ID: {e}", exc_info=True)
+            return None
+    
+    async def update_order_payment_info(self, order_id: int, payment_status: str,
+                                       payment_method: str) -> bool:
+        """
+        Update order payment information.
+        
+        Args:
+            order_id: Order ID
+            payment_status: Payment status ('paid' or 'unpaid')
+            payment_method: Payment method used
+        
+        Returns:
+            True if successful, False otherwise
+        """
+        try:
+            async with self.pool.acquire() as conn:
+                await conn.execute(
+                    """UPDATE orders 
+                       SET payment_status = $1, payment_method = $2
+                       WHERE id = $3""",
+                    payment_status, payment_method, order_id
+                )
+                return True
+        except Exception as e:
+            logger.error(f"Error updating order payment info: {e}", exc_info=True)
+            return False
 
 
 # Глобальний екземпляр бази даних

@@ -31,6 +31,21 @@ TEST_DB_NAME = getenv("TEST_DB_NAME", "test_shop_bot")
 # ID адміністраторів (додайте свій Telegram ID)
 ADMIN_IDS = [int(id) for id in getenv("ADMIN_IDS", "").split(",") if id]
 
+# ============ LIQPAY CONFIGURATION ============
+LIQPAY_PUBLIC_KEY = getenv("LIQPAY_PUBLIC_KEY", "")
+LIQPAY_PRIVATE_KEY = getenv("LIQPAY_PRIVATE_KEY", "")
+LIQPAY_CURRENCY = getenv("LIQPAY_CURRENCY", "UAH")
+LIQPAY_API_URL = getenv("LIQPAY_API_URL", "https://www.liqpay.ua/api/")
+LIQPAY_CALLBACK_URL = getenv("LIQPAY_CALLBACK_URL", "")
+
+# ============ TELEGRAM PAYMENTS CONFIGURATION ============
+TELEGRAM_PAYMENTS_ENABLED = getenv("TELEGRAM_PAYMENTS_ENABLED", "false").lower() == "true"
+TELEGRAM_PAYMENT_PROVIDER = getenv("TELEGRAM_PAYMENT_PROVIDER", "stripe")
+
+# ============ PAYMENT PREFERENCES ============
+PRIMARY_PAYMENT_METHOD = getenv("PRIMARY_PAYMENT_METHOD", "liqpay")
+SHOW_PAYMENT_METHOD_CHOICE = getenv("SHOW_PAYMENT_METHOD_CHOICE", "true").lower() == "true"
+
 # Перевірка, чи запускаються тести
 IS_TESTING = "pytest" in sys.modules or "test" in sys.argv[0] or "conftest" in sys.argv[0]
 
