@@ -8,7 +8,7 @@ from aiogram.fsm.state import State, StatesGroup
 from aiogram.utils.keyboard import InlineKeyboardBuilder
 
 from database import db
-from filters import IsAdminFilter
+from filters import IsAdminFilter, IsAdminCallbackFilter
 from logger_config import get_logger
 from keyboards import (
     get_admin_main_keyboard,
@@ -277,7 +277,7 @@ async def admin_add_product_start(query: CallbackQuery, state: FSMContext) -> No
     await query.answer()
 
 
-@router.message(AddProductStates.waiting_for_name)
+@router.message(AddProductStates.waiting_for_name, IsAdminFilter())
 async def process_product_name(message: Message, state: FSMContext) -> None:
     """Обработка названия товара."""
     if len(message.text) > 255:
@@ -289,7 +289,7 @@ async def process_product_name(message: Message, state: FSMContext) -> None:
     await message.answer("📝 Введіть опис товару (макс 1000 символів):")
 
 
-@router.message(AddProductStates.waiting_for_description)
+@router.message(AddProductStates.waiting_for_description, IsAdminFilter())
 async def process_product_description(message: Message, state: FSMContext) -> None:
     """Обработка описания товара."""
     if len(message.text) > 1000:
@@ -301,7 +301,7 @@ async def process_product_description(message: Message, state: FSMContext) -> No
     await message.answer("💰 Введіть ціну товару (в гривнях, наприклад 2500.50):")
 
 
-@router.message(AddProductStates.waiting_for_price)
+@router.message(AddProductStates.waiting_for_price, IsAdminFilter())
 async def process_product_price(message: Message, state: FSMContext) -> None:
     """Обработка цены товара."""
     try:
@@ -342,7 +342,7 @@ async def process_product_price(message: Message, state: FSMContext) -> None:
         await message.answer("❌ Введіть дійсну ціну (число, наприклад 2500 або 2500.50)")
 
 
-@router.callback_query(AddProductStates.waiting_for_category, F.data.startswith("select_category:"))
+@router.callback_query(AddProductStates.waiting_for_category, F.data.startswith("select_category:"), IsAdminCallbackFilter())
 async def process_product_category(query: CallbackQuery, state: FSMContext) -> None:
     """Обработка выбора категории товара."""
     category = query.data.split(":", 1)[1]
@@ -352,7 +352,7 @@ async def process_product_category(query: CallbackQuery, state: FSMContext) -> N
     await query.answer()
 
 
-@router.message(AddProductStates.waiting_for_stock)
+@router.message(AddProductStates.waiting_for_stock, IsAdminFilter())
 async def process_product_stock(message: Message, state: FSMContext) -> None:
     """Обработка количества товара."""
     try:
@@ -371,7 +371,7 @@ async def process_product_stock(message: Message, state: FSMContext) -> None:
         await message.answer("❌ Введіть дійсну кількість (число)")
 
 
-@router.message(AddProductStates.waiting_for_image_url)
+@router.message(AddProductStates.waiting_for_image_url, IsAdminFilter())
 async def process_product_image(message: Message, state: FSMContext) -> None:
     """Обработка URL изображения товара."""
     image_url = None if message.text.lower() == "skip" else message.text
@@ -404,9 +404,9 @@ async def process_product_image(message: Message, state: FSMContext) -> None:
     await message.answer(confirmation_text, reply_markup=builder.as_markup())
 
 
-@router.callback_query(AddProductStates.waiting_for_confirmation, F.data == "confirm_add_product")
+@router.callback_query(AddProductStates.waiting_for_confirmation, F.data == "confirm_add_product", IsAdminCallbackFilter())
 async def confirm_add_product(query: CallbackQuery, state: FSMContext) -> None:
-    """Подтверждение и сохранение нового товара."""
+    """Подтверждение и сохранение товара."""
     try:
         data = await state.get_data()
         
@@ -446,7 +446,7 @@ async def confirm_add_product(query: CallbackQuery, state: FSMContext) -> None:
         await state.clear()
 
 
-@router.callback_query(AddProductStates.waiting_for_confirmation, F.data == "cancel_add_product")
+@router.callback_query(AddProductStates.waiting_for_confirmation, F.data == "cancel_add_product", IsAdminCallbackFilter())
 async def cancel_add_product(query: CallbackQuery, state: FSMContext) -> None:
     """Отмена добавления товара."""
     await state.clear()

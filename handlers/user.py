@@ -12,6 +12,7 @@ from keyboards import (
     get_main_menu,
     get_admin_menu
 )
+from filters import IsUserFilter, IsUserCallbackFilter
 from config import ADMIN_IDS
 from tts_service import text_to_speech, get_product_description_for_tts
 from logger_config import get_logger
@@ -21,7 +22,7 @@ router = Router()
 
 
 # Обработчики для кнопок меню
-@router.message(F.text == "🛍️ Каталог")
+@router.message(F.text == "🛍️ Каталог", IsUserFilter())
 async def handle_catalog_button(message: Message) -> None:
     """Обработчик кнопки каталога."""
     products = await db.get_all_products()
@@ -38,7 +39,7 @@ async def handle_catalog_button(message: Message) -> None:
     await message.answer(catalog_text, reply_markup=get_products_keyboard(products))
 
 
-@router.message(F.text == "📦 Мои заказы")
+@router.message(F.text == "📦 Мои заказы", IsUserFilter())
 async def handle_my_orders_button(message: Message) -> None:
     """Обработчик кнопки мои заказы."""
     orders = await db.get_user_orders(message.from_user.id)
@@ -52,7 +53,7 @@ async def handle_my_orders_button(message: Message) -> None:
     await message.answer(orders_text, reply_markup=get_my_orders_keyboard(orders))
 
 
-@router.message(F.text == "📚 Категории")
+@router.message(F.text == "📚 Категории", IsUserFilter())
 async def handle_categories_button(message: Message) -> None:
     """Обработчик кнопки категории."""
     categories = await db.get_categories()
@@ -67,7 +68,7 @@ async def handle_categories_button(message: Message) -> None:
     await message.answer(f"{categories_text}{categories_list}")
 
 
-@router.message(F.text == "❓ Помощь")
+@router.message(F.text == "❓ Помощь", IsUserFilter())
 async def handle_help_button(message: Message) -> None:
     """Обработчик кнопки помощь."""
     help_text = (
@@ -84,8 +85,8 @@ async def handle_help_button(message: Message) -> None:
     await message.answer(help_text)
 
 
-@router.message(F.text == "ℹ️ О магазине")
-async def handle_info_button(message: Message) -> None:
+@router.message(F.text == "ℹ️ О магазине", IsUserFilter())
+async def handle_about_button(message: Message) -> None:
     """Обработчик кнопки о магазине."""
     info_text = (
         f"ℹ️ {html.bold('Информация о боте')}\n\n"
@@ -127,7 +128,7 @@ async def handle_admin_button(message: Message) -> None:
     )
 
 
-@router.message(Command("catalog"))
+@router.message(Command("catalog"), IsUserFilter())
 async def command_catalog_handler(message: Message) -> None:
     """Обробник команди /catalog."""
     products = await db.get_all_products()
@@ -144,7 +145,7 @@ async def command_catalog_handler(message: Message) -> None:
     await message.answer(catalog_text, reply_markup=get_products_keyboard(products))
 
 
-@router.message(Command("order"))
+@router.message(Command("order"), IsUserFilter())
 async def command_order_handler(message: Message) -> None:
     """Обробник команди /order."""
     products = await db.get_all_products()
@@ -161,7 +162,7 @@ async def command_order_handler(message: Message) -> None:
     await message.answer(order_text, reply_markup=get_order_keyboard(products))
 
 
-@router.message(Command("categories"))
+@router.message(Command("categories"), IsUserFilter())
 async def command_categories_handler(message: Message) -> None:
     """Обробник команди /categories."""
     categories = await db.get_categories()
@@ -179,7 +180,7 @@ async def command_categories_handler(message: Message) -> None:
     await message.answer(categories_text)
 
 
-@router.message(Command("myorders"))
+@router.message(Command("myorders"), IsUserFilter())
 async def command_my_orders_handler(message: Message) -> None:
     """Обробник команди /myorders."""
     orders = await db.get_user_orders(message.from_user.id)
@@ -216,7 +217,7 @@ async def command_my_orders_handler(message: Message) -> None:
 
 # =============== CALLBACK ОБРОБНИКИ ===============
 
-@router.callback_query(F.data.startswith("listen_product:"))
+@router.callback_query(F.data.startswith("listen_product:"), IsUserCallbackFilter())
 async def listen_product_callback(callback: CallbackQuery) -> None:
     """Обработчик для озвучивания описания товара."""
     try:
@@ -253,7 +254,7 @@ async def listen_product_callback(callback: CallbackQuery) -> None:
         await callback.answer("❌ Ошибка при обработке запроса", show_alert=True)
 
 
-@router.callback_query(F.data.startswith("product:"))
+@router.callback_query(F.data.startswith("product:"), IsUserCallbackFilter())
 async def product_details_callback(callback: CallbackQuery) -> None:
     """Обробник callback для перегляду деталей товару."""
     product_id = int(callback.data.split(":")[1])
@@ -278,7 +279,7 @@ async def product_details_callback(callback: CallbackQuery) -> None:
     await callback.answer()
 
 
-@router.callback_query(F.data.startswith("order_product:"))
+@router.callback_query(F.data.startswith("order_product:"), IsUserCallbackFilter())
 async def order_product_callback(callback: CallbackQuery) -> None:
     """Обробник callback для оформлення замовлення товару."""
     product_id = int(callback.data.split(":")[1])
@@ -319,7 +320,7 @@ async def order_product_callback(callback: CallbackQuery) -> None:
         await callback.answer("❌ Помилка оформлення замовлення", show_alert=True)
 
 
-@router.callback_query(F.data == "back_to_catalog")
+@router.callback_query(F.data == "back_to_catalog", IsUserCallbackFilter())
 async def back_to_catalog_callback(callback: CallbackQuery) -> None:
     """Обробник callback для повернення до каталогу."""
     products = await db.get_all_products()
@@ -340,7 +341,7 @@ async def back_to_catalog_callback(callback: CallbackQuery) -> None:
     await callback.answer()
 
 
-@router.callback_query(F.data == "my_orders")
+@router.callback_query(F.data == "my_orders", IsUserCallbackFilter())
 async def my_orders_callback(callback: CallbackQuery) -> None:
     """Обробник callback для перегляду замовлень."""
     orders = await db.get_user_orders(callback.from_user.id)
