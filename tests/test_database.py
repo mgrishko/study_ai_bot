@@ -60,173 +60,144 @@ class TestDatabase:
                 assert all(p['category'] == category for p in products)
     
     @pytest.mark.asyncio
-    async def test_add_user(self, db):
+    async def test_add_user(self, db_clean, user_factory):
         """Тест додавання користувача."""
-        import time
-        user_id = int(time.time() * 1000) % 999999999  # Унікальний ID
-        username = f"testuser_{user_id}"
-        first_name = "Тестовий"
-        last_name = "Користувач"
-        
-        await db.add_user(user_id, username, first_name, last_name)
+        user = await user_factory.create(
+            first_name="Тестовий",
+            last_name="Користувач"
+        )
         
         # Перевіряємо, що користувач доданий
-        async with db.pool.acquire() as conn:
-            user = await conn.fetchrow(
-                "SELECT * FROM users WHERE id = $1", user_id
+        async with db_clean.pool.acquire() as conn:
+            db_user = await conn.fetchrow(
+                "SELECT * FROM users WHERE id = $1", user['id']
             )
-            assert user is not None
-            assert user['username'] == username
-            assert user['first_name'] == first_name
-            assert user['last_name'] == last_name
+            assert db_user is not None
+            assert db_user['username'] == user['username']
+            assert db_user['first_name'] == user['first_name']
+            assert db_user['last_name'] == user['last_name']
     
     @pytest.mark.asyncio
-    async def test_create_order(self, db):
+    async def test_create_order(self, db_clean, user_factory, product_factory, order_factory):
         """Тест створення замовлення."""
-        # Додаємо користувача
-        user_id = 12346
-        await db.add_user(user_id, "testuser2", "Test", "User")
+        # Використовуємо factories для даних
+        user = await user_factory.create()
+        product = await product_factory.create()
         
-        # Отримуємо товар
-        products = await db.get_all_products()
+        initial_stock = product['stock']
         
-        if products:
-            product = products[0]
-            initial_stock = product['stock']
-            
-            # Створюємо замовлення
-            order_id = await db.create_order(
-                user_id=user_id,
-                user_name="Test User",
-                product_id=product['id'],
-                quantity=1
-            )
-            
-            assert order_id is not None
-            assert isinstance(order_id, int)
-            
-            # Перевіряємо, що залишок зменшився
-            updated_product = await db.get_product_by_id(product['id'])
-            assert updated_product['stock'] == initial_stock - 1
+        # Створюємо замовлення через factory
+        order = await order_factory.create(
+            user_id=user['id'],
+            product_id=product['id'],
+            quantity=1
+        )
+        
+        assert order is not None
+        assert order['user_id'] == user['id']
+        assert order['product_id'] == product['id']
+        
+        # Перевіряємо, що залишок зменшився
+        updated_product = await db_clean.get_product_by_id(product['id'])
+        assert updated_product['stock'] == initial_stock - 1
     
     @pytest.mark.asyncio
-    async def test_get_user_orders(self, db):
+    async def test_get_user_orders(self, db_clean, user_factory, product_factory, order_factory):
         """Тест отримання замовлень користувача."""
-        user_id = 12347
-        await db.add_user(user_id, "testuser3", "Test", "User")
+        # Використовуємо factories
+        user = await user_factory.create()
+        product = await product_factory.create()
         
-        products = await db.get_all_products()
+        # Створюємо замовлення через factory
+        await order_factory.create(
+            user_id=user['id'],
+            product_id=product['id']
+        )
         
-        if products:
-            product = products[0]
-            
-            # Створюємо замовлення
-            await db.create_order(
-                user_id=user_id,
-                user_name="Test User",
-                product_id=product['id'],
-                quantity=1
-            )
-            
-            # Отримуємо замовлення користувача
-            orders = await db.get_user_orders(user_id)
-            
-            assert isinstance(orders, list)
-            assert len(orders) > 0
-            assert orders[0]['user_id'] == user_id
+        # Отримуємо замовлення користувача
+        orders = await db_clean.get_user_orders(user['id'])
+        
+        assert isinstance(orders, list)
+        assert len(orders) > 0
+        assert orders[0]['user_id'] == user['id']
     
     @pytest.mark.asyncio
-    async def test_update_order_status(self, db):
+    async def test_update_order_status(self, db_clean, user_factory, product_factory, order_factory):
         """Тест оновлення статусу замовлення."""
-        user_id = 12348
-        await db.add_user(user_id, "testuser4", "Test", "User")
+        # Використовуємо factories
+        user = await user_factory.create()
+        product = await product_factory.create()
         
-        products = await db.get_all_products()
+        # Створюємо замовлення через factory
+        order = await order_factory.create(
+            user_id=user['id'],
+            product_id=product['id']
+        )
         
-        if products:
-            product = products[0]
-            
-            # Створюємо замовлення
-            order_id = await db.create_order(
-                user_id=user_id,
-                user_name="Test User",
-                product_id=product['id'],
-                quantity=1
+        # Оновлюємо статус
+        result = await db_clean.update_order_status(order['id'], "confirmed")
+        assert result is True
+        
+        # Перевіряємо, що статус оновлено
+        async with db_clean.pool.acquire() as conn:
+            updated_order = await conn.fetchrow(
+                "SELECT * FROM orders WHERE id = $1", order['id']
             )
-            
-            # Оновлюємо статус
-            result = await db.update_order_status(order_id, "confirmed")
-            assert result is True
-            
-            # Перевіряємо, що статус оновлено
-            async with db.pool.acquire() as conn:
-                order = await conn.fetchrow(
-                    "SELECT * FROM orders WHERE id = $1", order_id
-                )
-                assert order['status'] == "confirmed"
+            assert updated_order['status'] == "confirmed"
     
     @pytest.mark.asyncio
-    async def test_add_product(self, db):
+    async def test_add_product(self, db_clean, product_factory):
         """Тест додавання нового товару."""
-        import time
-        product_name = f"Test Product {int(time.time() * 1000)}"
-        
-        product_id = await db.add_product(
-            name=product_name,
+        # Використовуємо factory для створення товару
+        product = await product_factory.create(
+            name="Custom Test Product",
             description="Test product description",
             price=999.99,
             category="Тестова категорія",
-            stock=42,
-            image_url="https://example.com/image.jpg"
+            stock=42
         )
         
-        assert product_id is not None
-        assert isinstance(product_id, int)
+        assert product is not None
+        assert product['id'] is not None
         
         # Перевіряємо, що товар додано
-        product = await db.get_product_by_id(product_id)
-        assert product is not None
-        assert product['name'] == product_name
-        assert float(product['price']) == 999.99
-        assert product['stock'] == 42
-        assert product['image_url'] == "https://example.com/image.jpg"
+        db_product = await db_clean.get_product_by_id(product['id'])
+        assert db_product is not None
+        assert db_product['name'] == "Custom Test Product"
+        assert float(db_product['price']) == 999.99
+        assert db_product['stock'] == 42
     
     @pytest.mark.asyncio
-    async def test_add_product_without_image(self, db):
+    async def test_add_product_without_image(self, db_clean, product_factory):
         """Тест додавання товару без зображення."""
-        import time
-        product_name = f"Test Product No Image {int(time.time() * 1000)}"
-        
-        product_id = await db.add_product(
-            name=product_name,
+        product = await product_factory.create(
+            name="Product No Image",
             description="Product without image",
             price=500.00,
             category="Тестова категорія",
             stock=10
         )
         
-        assert product_id is not None
-        product = await db.get_product_by_id(product_id)
-        assert product['image_url'] is None
+        assert product is not None
+        assert product['id'] is not None
+        
+        db_product = await db_clean.get_product_by_id(product['id'])
+        assert db_product['image_url'] is None
     
     @pytest.mark.asyncio
-    async def test_update_product(self, db):
+    async def test_update_product(self, db_clean, product_factory):
         """Тест оновлення товару."""
-        import time
-        product_name = f"Update Test {int(time.time() * 1000)}"
-        
-        # Додаємо товар
-        product_id = await db.add_product(
-            name=product_name,
+        # Використовуємо factory для створення товару
+        product = await product_factory.create(
+            name="Original Product",
             description="Original description",
             price=100.00,
-            category="Тестова категорія",
             stock=5
         )
         
         # Оновлюємо товар
-        result = await db.update_product(
-            product_id=product_id,
+        result = await db_clean.update_product(
+            product_id=product['id'],
             name="Updated Name",
             price=200.00,
             stock=10
@@ -235,36 +206,32 @@ class TestDatabase:
         assert result is True
         
         # Перевіряємо оновлені дані
-        product = await db.get_product_by_id(product_id)
-        assert product['name'] == "Updated Name"
-        assert float(product['price']) == 200.00
-        assert product['stock'] == 10
-        assert product['description'] == "Original description"  # Не змінювався
+        updated_product = await db_clean.get_product_by_id(product['id'])
+        assert updated_product['name'] == "Updated Name"
+        assert float(updated_product['price']) == 200.00
+        assert updated_product['stock'] == 10
+        assert updated_product['description'] == "Original description"
     
     @pytest.mark.asyncio
-    async def test_delete_product(self, db):
+    async def test_delete_product(self, db_clean, product_factory):
         """Тест видалення товару."""
-        import time
-        product_name = f"Delete Test {int(time.time() * 1000)}"
-        
-        # Додаємо товар
-        product_id = await db.add_product(
-            name=product_name,
+        # Використовуємо factory для створення товару
+        product = await product_factory.create(
+            name="Product to Delete",
             description="Will be deleted",
             price=150.00,
-            category="Тестова категорія",
             stock=3
         )
         
-        assert product_id is not None
+        assert product is not None
         
         # Видаляємо товар
-        result = await db.delete_product(product_id)
+        result = await db_clean.delete_product(product['id'])
         assert result is True
         
         # Перевіряємо, що товар видалено
-        product = await db.get_product_by_id(product_id)
-        assert product is None
+        deleted_product = await db_clean.get_product_by_id(product['id'])
+        assert deleted_product is None
     
     @pytest.mark.asyncio
     async def test_delete_nonexistent_product(self, db):

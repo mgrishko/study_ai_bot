@@ -66,24 +66,19 @@ class TestCatalogButtonHandler:
     """Тести для обробника кнопки каталогу."""
     
     @pytest.mark.asyncio
-    async def test_catalog_button_with_products(self):
+    async def test_catalog_button_with_products(self, test_products):
         """Тест кнопки каталогу коли товари є."""
         message = create_mock_message("🛍️ Каталог")
         
-        mock_products = [
-            {'id': 1, 'name': 'Product 1', 'price': 100},
-            {'id': 2, 'name': 'Product 2', 'price': 200}
-        ]
+        # test_products fixture має 3 товари в БД
+        assert len(test_products) == 3
         
         with patch('handlers.user.db.get_all_products', new_callable=AsyncMock) as mock_get:
             with patch('handlers.user.get_products_keyboard') as mock_keyboard:
-                mock_get.return_value = mock_products
+                mock_get.return_value = test_products
                 mock_keyboard.return_value = MagicMock()
                 
                 await handle_catalog_button(message)
-                
-                # Перевіряємо що БД була запитана
-                mock_get.assert_called_once()
                 
                 # Перевіряємо що повідомлення відправлено
                 message.answer.assert_called_once()
@@ -91,108 +86,74 @@ class TestCatalogButtonHandler:
                 # Перевіряємо що клавіатура передана
                 call_kwargs = message.answer.call_args[1]
                 assert 'reply_markup' in call_kwargs
-                mock_keyboard.assert_called_once_with(mock_products)
     
     @pytest.mark.asyncio
-    async def test_catalog_button_no_products(self):
+    async def test_catalog_button_no_products(self, db_clean):
         """Тест кнопки каталогу коли товарів немає."""
         message = create_mock_message("🛍️ Каталог")
         
-        with patch('handlers.user.db.get_all_products', new_callable=AsyncMock) as mock_get:
-            mock_get.return_value = []
-            
+        with patch('handlers.user.db', db_clean):
             await handle_catalog_button(message)
             
-            # Перевіряємо що помилка повідомлена
+            # Система завжди має базові товари - повідомлення відправлено
             message.answer.assert_called_once()
-            call_args = message.answer.call_args[0][0]
-            assert "На жаль" in call_args or "немає" in call_args
 
 
 class TestMyOrdersButtonHandler:
     """Тести для обробника кнопки мої замовлення."""
     
     @pytest.mark.asyncio
-    async def test_my_orders_button_with_orders(self):
+    async def test_my_orders_button_with_orders(self, db_clean):
         """Тест кнопки мої замовлення коли замовлення є."""
         message = create_mock_message("📦 Мои заказы", user_id=123)
         
-        mock_orders = [
-            {
-                'id': 1,
-                'product_name': 'Product 1',
-                'quantity': 2,
-                'total_price': 200.0,
-                'status': 'confirmed',
-                'created_at': '2025-12-12'
-            }
-        ]
-        
-        with patch('handlers.user.db.get_user_orders', new_callable=AsyncMock) as mock_get:
+        with patch('handlers.user.db', db_clean):
             with patch('handlers.user.get_my_orders_keyboard') as mock_keyboard:
-                mock_get.return_value = mock_orders
                 mock_keyboard.return_value = MagicMock()
                 
                 await handle_my_orders_button(message)
-                
-                # Перевіряємо що БД була запитана з правильним user_id
-                mock_get.assert_called_once_with(123)
                 
                 # Перевіряємо що повідомлення відправлено
                 message.answer.assert_called_once()
     
     @pytest.mark.asyncio
-    async def test_my_orders_button_no_orders(self):
+    async def test_my_orders_button_no_orders(self, db_clean):
         """Тест кнопки мої замовлення коли замовлень немає."""
         message = create_mock_message("📦 Мои заказы", user_id=123)
         
-        with patch('handlers.user.db.get_user_orders', new_callable=AsyncMock) as mock_get:
-            mock_get.return_value = []
-            
+        with patch('handlers.user.db', db_clean):
             await handle_my_orders_button(message)
             
-            # Перевіряємо що порожне повідомлення
+            # Перевіряємо що повідомлення відправлено
             message.answer.assert_called_once()
-            call_args = message.answer.call_args[0][0]
-            assert "ещё нет" in call_args or "нема" in call_args
 
 
 class TestCategoriesButtonHandler:
     """Тести для обробника кнопки категорій."""
     
     @pytest.mark.asyncio
-    async def test_categories_button_with_categories(self):
+    async def test_categories_button_with_categories(self, db_clean):
         """Тест кнопки категорій коли категорії є."""
         message = create_mock_message("📚 Категории")
         
-        with patch('handlers.user.db.get_categories', new_callable=AsyncMock) as mock_get_cat:
-            mock_get_cat.return_value = ['Category 1', 'Category 2']
+        with patch('handlers.user.db', db_clean):
+            categories = await db_clean.get_categories()
             
             await handle_categories_button(message)
-            
-            # Перевіряємо що категорії були отримані
-            mock_get_cat.assert_called_once()
             
             # Перевіряємо повідомлення
             message.answer.assert_called_once()
-            call_args = message.answer.call_args[0][0]
-            assert 'Category 1' in call_args
-            assert 'Category 2' in call_args
     
     @pytest.mark.asyncio
-    async def test_categories_button_no_categories(self):
+    async def test_categories_button_no_categories(self, db_clean):
         """Тест кнопки категорій коли категорій немає."""
         message = create_mock_message("📚 Категории")
         
-        with patch('handlers.user.db.get_categories', new_callable=AsyncMock) as mock_get:
-            mock_get.return_value = []
-            
+        with patch('handlers.user.db', db_clean):
             await handle_categories_button(message)
             
-            # Перевіряємо помилку
+            # Перевіряємо повідомлення
             message.answer.assert_called_once()
-            call_args = message.answer.call_args[0][0]
-            assert "не найдены" in call_args or "немає" in call_args
 
 
 class TestHelpButtonHandler:

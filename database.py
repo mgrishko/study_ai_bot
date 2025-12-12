@@ -372,6 +372,75 @@ class Database:
         except Exception as e:
             logger.exception(f"Error deleting product: {e}")
             return False
+    
+    # ═══════════════════════════════════════════════════════════════════════════
+    # CLEANUP METHODS FOR TESTING (Rails-style)
+    # ═══════════════════════════════════════════════════════════════════════════
+    
+    async def truncate_test_tables(self):
+        """Очищає всі таблиці БД для тестування (Rails-style cleanup).
+        
+        Видаляє дані з таблиць у правильному порядку з врахуванням зовнішніх ключів.
+        Зберігає структуру БД та початкові товари.
+        """
+        try:
+            async with self.pool.acquire() as conn:
+                async with conn.transaction():
+                    # Видаляємо замовлення першими (вони мають FK на products)
+                    await conn.execute("DELETE FROM orders")
+                    
+                    # Видаляємо користувачів
+                    await conn.execute("DELETE FROM users")
+                    
+                    # Видаляємо тестові товари, але зберігаємо початкові (id 1-8)
+                    await conn.execute("DELETE FROM products WHERE id > 8")
+                    
+                    # Скидаємо sequences (auto-increment counters) на початкові значення
+                    await conn.execute("ALTER SEQUENCE orders_id_seq RESTART WITH 1")
+                    await conn.execute("ALTER SEQUENCE products_id_seq RESTART WITH 9")
+            
+            logger.debug("Test tables truncated successfully")
+        except Exception as e:
+            logger.error(f"Error truncating test tables: {e}", exc_info=True)
+            raise
+    
+    async def clear_specific_table(self, table_name: str, condition: str = ""):
+        """Очищає конкретну таблицю з опціональною умовою.
+        
+        Args:
+            table_name: Назва таблиці для очищення
+            condition: SQL умова (без WHERE) для вибіркового видалення
+        
+        Example:
+            await db.clear_specific_table("orders", "status = 'pending'")
+        """
+        try:
+            async with self.pool.acquire() as conn:
+                if condition:
+                    await conn.execute(f"DELETE FROM {table_name} WHERE {condition}")
+                else:
+                    await conn.execute(f"DELETE FROM {table_name}")
+            
+            logger.debug(f"Table {table_name} cleared" + (f" with condition: {condition}" if condition else ""))
+        except Exception as e:
+            logger.error(f"Error clearing {table_name}: {e}", exc_info=True)
+            raise
+    
+    async def reset_sequences(self):
+        """Скидає всі автоінкремент sequences для таблиць.
+        
+        Користується для відновлення порядку ID після очищення таблиць.
+        """
+        try:
+            async with self.pool.acquire() as conn:
+                # Скидаємо sequences відповідно до бізнес-логіки
+                await conn.execute("ALTER SEQUENCE orders_id_seq RESTART WITH 1")
+                await conn.execute("ALTER SEQUENCE products_id_seq RESTART WITH 9")  # Після початкових товарів
+            
+            logger.debug("Sequences reset successfully")
+        except Exception as e:
+            logger.error(f"Error resetting sequences: {e}", exc_info=True)
+            raise
 
 
 # Глобальний екземпляр бази даних
