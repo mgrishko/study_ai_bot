@@ -105,7 +105,7 @@ class TestMyOrdersButtonHandler:
     @pytest.mark.asyncio
     async def test_my_orders_button_with_orders(self, db_clean):
         """Тест кнопки мої замовлення коли замовлення є."""
-        message = create_mock_message("📦 Мои заказы", user_id=123)
+        message = create_mock_message("📦 Мої замовлення", user_id=123)
         
         with patch('handlers.user.db', db_clean):
             with patch('handlers.user.get_my_orders_keyboard') as mock_keyboard:
@@ -117,9 +117,9 @@ class TestMyOrdersButtonHandler:
                 message.answer.assert_called_once()
     
     @pytest.mark.asyncio
-    async def test_my_orders_button_no_orders(self, db_clean):
+    async def test_my_orders_button_without_orders(self, db_clean):
         """Тест кнопки мої замовлення коли замовлень немає."""
-        message = create_mock_message("📦 Мои заказы", user_id=123)
+        message = create_mock_message("📦 Мої замовлення", user_id=123)
         
         with patch('handlers.user.db', db_clean):
             await handle_my_orders_button(message)
@@ -134,7 +134,7 @@ class TestCategoriesButtonHandler:
     @pytest.mark.asyncio
     async def test_categories_button_with_categories(self, db_clean):
         """Тест кнопки категорій коли категорії є."""
-        message = create_mock_message("📚 Категории")
+        message = create_mock_message("📚 Категорії")
         
         with patch('handlers.user.db', db_clean):
             categories = await db_clean.get_categories()
@@ -145,9 +145,9 @@ class TestCategoriesButtonHandler:
             message.answer.assert_called_once()
     
     @pytest.mark.asyncio
-    async def test_categories_button_no_categories(self, db_clean):
+    async def test_categories_button_without_categories(self, db_clean):
         """Тест кнопки категорій коли категорій немає."""
-        message = create_mock_message("📚 Категории")
+        message = create_mock_message("📚 Категорії")
         
         with patch('handlers.user.db', db_clean):
             await handle_categories_button(message)
@@ -162,7 +162,7 @@ class TestHelpButtonHandler:
     @pytest.mark.asyncio
     async def test_help_button_displays_all_commands(self):
         """Тест кнопки допомога виводить всі команди."""
-        message = create_mock_message("❓ Помощь")
+        message = create_mock_message("❓ Допомога")
         
         await handle_help_button(message)
         
@@ -225,7 +225,7 @@ class TestAdminButtonHandler:
     async def test_admin_button_for_admin_user(self):
         """Тест кнопки адміністратор для адміна."""
         admin_id = ADMIN_IDS[0] if ADMIN_IDS else 999
-        message = create_mock_message("⚙️ Администратор", user_id=admin_id)
+        message = create_mock_message("⚙️ Адміністратор", user_id=admin_id)
         
         with patch('handlers.user.ADMIN_IDS', [admin_id]):
             await handle_admin_button(message)
@@ -238,7 +238,7 @@ class TestAdminButtonHandler:
     @pytest.mark.asyncio
     async def test_admin_button_for_non_admin_user(self):
         """Тест кнопки адміністратор для звичайного користувача."""
-        message = create_mock_message("⚙️ Администратор", user_id=999)
+        message = create_mock_message("⚙️ Адміністратор", user_id=999)
         
         with patch('handlers.user.ADMIN_IDS', [111]):  # Інший ID
             await handle_admin_button(message)
@@ -536,7 +536,7 @@ class TestListenProductCallback:
             await listen_product_callback(callback)
             
             callback.answer.assert_called_once()
-            assert "не найден" in callback.answer.call_args[0][0]
+            assert "❌ Товар не знайдено" in callback.answer.call_args[0][0]
     
     @pytest.mark.asyncio
     async def test_listen_product_callback_tts_failure(self):
@@ -563,7 +563,7 @@ class TestListenProductCallback:
                     
                     # Перевіряємо помилку
                     callback.message.answer.assert_called_once()
-                    assert "Ошибка" in callback.message.answer.call_args[0][0]
+                    assert "❌ Помилка при генерації аудіо. Спробуйте пізніше." in callback.message.answer.call_args[0][0]
 
 
 class TestBackToCatalogCallback:

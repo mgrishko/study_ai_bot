@@ -19,14 +19,14 @@ class MessageLoggerMiddleware(BaseMiddleware):
         event: Message,
         data: dict[str, Any],
     ) -> Any:
-        """Обработка сообщения с логированием."""
+        """Обробка повідомлення з логуванням."""
         start_time = time.time()
         
         user = event.from_user
         action: str = "unknown"
         details: dict[str, Any] = {}
 
-        # Определяем тип сообщения
+        # Визначаємо тип повідомлення
         if event.text:
             if event.text.startswith("/"):
                 action = f"command:{event.text.split()[0]}"
@@ -84,7 +84,7 @@ class CallbackLoggerMiddleware(BaseMiddleware):
         event: CallbackQuery,
         data: dict[str, Any],
     ) -> Any:
-        """Обработка callback с логированием."""
+        """Обробка callback з логуванням."""
         start_time = time.time()
         
         user = event.from_user

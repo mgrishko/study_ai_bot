@@ -19,7 +19,7 @@ async def command_start_handler(message: Message) -> None:
         message.from_user.last_name
     )
     
-    # Определяем меню в зависимости от статуса пользователя
+    # Визначаємо меню залежно від статусу користувача
     is_admin = message.from_user.id in ADMIN_IDS
     menu = get_admin_menu() if is_admin else get_main_menu()
     

@@ -1,40 +1,40 @@
-"""Reply клавиатуры (кнопки внизу чата)."""
+"""Reply клавіатури (кнопки внизу чату)."""
 
 from aiogram.types import ReplyKeyboardMarkup, KeyboardButton
 
 
 def get_main_menu() -> ReplyKeyboardMarkup:
-    """Возвращает главное меню пользователя."""
+    """Повертає головне меню користувача."""
     keyboard = ReplyKeyboardMarkup(
         keyboard=[
-            [KeyboardButton(text="🛍️ Каталог"), KeyboardButton(text="📦 Мои заказы")],
-            [KeyboardButton(text="📚 Категории"), KeyboardButton(text="❓ Помощь")],
-            [KeyboardButton(text="ℹ️ О магазине"), KeyboardButton(text="🎨 AI")],
+            [KeyboardButton(text="🛍️ Каталог"), KeyboardButton(text="📦 Мої замовлення")],
+            [KeyboardButton(text="📚 Категорії"), KeyboardButton(text="❓ Допомога")],
+            [KeyboardButton(text="ℹ️ Про магазин"), KeyboardButton(text="🎨 AI")],
         ],
         resize_keyboard=True,
         one_time_keyboard=False,
-        input_field_placeholder="Выберите опцию из меню...",
+        input_field_placeholder="Виберіть опцію з меню...",
     )
     return keyboard
 
 
 def get_admin_menu() -> ReplyKeyboardMarkup:
-    """Возвращает меню администратора."""
+    """Повертає меню адміністратора."""
     keyboard = ReplyKeyboardMarkup(
         keyboard=[
-            [KeyboardButton(text="🛍️ Каталог"), KeyboardButton(text="📦 Мои заказы")],
-            [KeyboardButton(text="⚙️ Администратор"), KeyboardButton(text="❓ Помощь")],
+            [KeyboardButton(text="🛍️ Каталог"), KeyboardButton(text="📦 Мої замовлення")],
+            [KeyboardButton(text="⚙️ Адміністратор"), KeyboardButton(text="❓ Допомога")],
             [KeyboardButton(text="🎨 AI")],
         ],
         resize_keyboard=True,
         one_time_keyboard=False,
-        input_field_placeholder="Выберите опцию из меню...",
+        input_field_placeholder="Виберіть опцію з меню...",
     )
     return keyboard
 
 
 def get_hidden_keyboard() -> ReplyKeyboardMarkup:
-    """Возвращает скрытую клавиатуру."""
+    """Повертає приховану клавіатуру."""
     keyboard = ReplyKeyboardMarkup(
         keyboard=[],
         resize_keyboard=True,

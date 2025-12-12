@@ -22,16 +22,16 @@ logger = get_logger("aiogram.handlers")
 router = Router()
 
 
-# FSM States для добавления товара
+# FSM Стани для додавання товару
 class AddProductStates(StatesGroup):
-    """Состояния FSM для добавления нового товара."""
-    waiting_for_name = State()           # Шаг 1: название
-    waiting_for_description = State()    # Шаг 2: описание
-    waiting_for_price = State()          # Шаг 3: цена
-    waiting_for_category = State()       # Шаг 4: категория
-    waiting_for_stock = State()          # Шаг 5: количество
-    waiting_for_image_url = State()      # Шаг 6: URL изображения
-    waiting_for_confirmation = State()   # Шаг 7: подтверждение
+    """Стани FSM для додавання нового товару."""
+    waiting_for_name = State()           # Крок 1: назва
+    waiting_for_description = State()    # Крок 2: опис
+    waiting_for_price = State()          # Крок 3: ціна
+    waiting_for_category = State()       # Крок 4: категорія
+    waiting_for_stock = State()          # Крок 5: кількість
+    waiting_for_image_url = State()      # Крок 6: URL зображення
+    waiting_for_confirmation = State()   # Крок 7: підтвердження
 
 
 @router.message(Command("admin"), IsAdminFilter())
@@ -279,7 +279,7 @@ async def admin_add_product_start(query: CallbackQuery, state: FSMContext) -> No
 
 @router.message(AddProductStates.waiting_for_name, IsAdminFilter())
 async def process_product_name(message: Message, state: FSMContext) -> None:
-    """Обработка названия товара."""
+    """Обробка назви товару."""
     if len(message.text) > 255:
         await message.answer("❌ Назва товару занадто довга (макс 255 символів)")
         return
@@ -291,7 +291,7 @@ async def process_product_name(message: Message, state: FSMContext) -> None:
 
 @router.message(AddProductStates.waiting_for_description, IsAdminFilter())
 async def process_product_description(message: Message, state: FSMContext) -> None:
-    """Обработка описания товара."""
+    """Обробка опису товару."""
     if len(message.text) > 1000:
         await message.answer("❌ Опис занадто довгий (макс 1000 символів)")
         return
@@ -303,7 +303,7 @@ async def process_product_description(message: Message, state: FSMContext) -> No
 
 @router.message(AddProductStates.waiting_for_price, IsAdminFilter())
 async def process_product_price(message: Message, state: FSMContext) -> None:
-    """Обработка цены товара."""
+    """Обробка ціни товару."""
     try:
         price = float(message.text)
         if price <= 0:
@@ -315,7 +315,7 @@ async def process_product_price(message: Message, state: FSMContext) -> None:
         
         await state.update_data(price=price)
         
-        # Получаем категории для выбора
+        # Отримуємо категорії для вибору
         categories = await db.get_categories()
         if not categories:
             await message.answer("❌ Немає категорій. Спочатку додайте категорію в БД.")
@@ -325,7 +325,7 @@ async def process_product_price(message: Message, state: FSMContext) -> None:
         
         await state.set_state(AddProductStates.waiting_for_category)
         
-        # Создаем клавиатуру с категориями
+        # Створюємо клавіатуру з категоріями
         builder = InlineKeyboardBuilder()
         for category in categories:
             builder.button(
@@ -344,7 +344,7 @@ async def process_product_price(message: Message, state: FSMContext) -> None:
 
 @router.callback_query(AddProductStates.waiting_for_category, F.data.startswith("select_category:"), IsAdminCallbackFilter())
 async def process_product_category(query: CallbackQuery, state: FSMContext) -> None:
-    """Обработка выбора категории товара."""
+    """Обробка вибору категорії товару."""
     category = query.data.split(":", 1)[1]
     await state.update_data(category=category)
     await state.set_state(AddProductStates.waiting_for_stock)
@@ -354,7 +354,7 @@ async def process_product_category(query: CallbackQuery, state: FSMContext) -> N
 
 @router.message(AddProductStates.waiting_for_stock, IsAdminFilter())
 async def process_product_stock(message: Message, state: FSMContext) -> None:
-    """Обработка количества товара."""
+    """Обробка кількості товару."""
     try:
         stock = int(message.text)
         if stock < 0:
@@ -373,7 +373,7 @@ async def process_product_stock(message: Message, state: FSMContext) -> None:
 
 @router.message(AddProductStates.waiting_for_image_url, IsAdminFilter())
 async def process_product_image(message: Message, state: FSMContext) -> None:
-    """Обработка URL изображения товара."""
+    """Обробка URL зображення товару."""
     image_url = None if message.text.lower() == "skip" else message.text
     
     if image_url and not (image_url.startswith("http://") or image_url.startswith("https://")):
@@ -383,7 +383,7 @@ async def process_product_image(message: Message, state: FSMContext) -> None:
     await state.update_data(image_url=image_url)
     await state.set_state(AddProductStates.waiting_for_confirmation)
     
-    # Показываем подтверждение
+    # Показуємо підтвердження
     data = await state.get_data()
     confirmation_text = (
         f"✅ {html.bold('Перевірте дані товару:')}\n\n"
@@ -464,7 +464,7 @@ async def cancel_add_product(query: CallbackQuery, state: FSMContext) -> None:
 
 @router.callback_query(F.data == "admin_delete_products", IsAdminFilter())
 async def admin_delete_products_menu(query: CallbackQuery) -> None:
-    """Показывает список товаров для удаления."""
+    """Показує список товарів для видалення."""
     logger.info(f"Admin {query.from_user.id} opened product deletion menu")
     
     products = await db.get_all_products()
@@ -477,7 +477,7 @@ async def admin_delete_products_menu(query: CallbackQuery) -> None:
         await query.answer()
         return
     
-    # Показываем товары для удаления (максимум 15 товаров в одном сообщении)
+    # Показуємо товари для видалення (максимум 15 товарів у одному повідомленні)
     text = f"❌ {html.bold('Виберіть товар для видалення:')}\n\n"
     
     builder = InlineKeyboardBuilder()

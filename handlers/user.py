@@ -24,10 +24,10 @@ logger = get_logger("aiogram.handlers")
 router = Router()
 
 
-# Обработчики для кнопок меню
+# Обробники для кнопок меню
 @router.message(F.text == "🛍️ Каталог", IsUserFilter())
 async def handle_catalog_button(message: Message) -> None:
-    """Обработчик кнопки каталога."""
+    """Обробник кнопки каталога."""
     products = await db.get_all_products()
     
     if not products:
@@ -42,92 +42,113 @@ async def handle_catalog_button(message: Message) -> None:
     await message.answer(catalog_text, reply_markup=get_products_keyboard(products))
 
 
-@router.message(F.text == "📦 Мои заказы", IsUserFilter())
+@router.message(F.text == "📦 Мої замовлення", IsUserFilter())
 async def handle_my_orders_button(message: Message) -> None:
-    """Обработчик кнопки мои заказы."""
+    """Обробник кнопки мої замовлення."""
     orders = await db.get_user_orders(message.from_user.id)
     
     if not orders:
-        await message.answer("У вас ещё нет заказов.")
+        await message.answer("У вас ще немає замовлень.")
         return
     
-    orders_text = f"📦 {html.bold('Ваши заказы:')}\n\n"
+    orders_text = f"📦 {html.bold('Ваші замовлення:')}\n\n"
     
-    await message.answer(orders_text, reply_markup=get_my_orders_keyboard(orders))
+    status_emoji = {
+        'pending': '🕐',
+        'confirmed': '✅',
+        'shipped': '🚚',
+        'delivered': '📬',
+        'cancelled': '❌'
+    }
+    
+    for order in orders:
+        status = order['status']
+        emoji = status_emoji.get(status, '❓')
+        
+        orders_text += (
+            f"{emoji} {html.bold(f'Замовлення #{order['id']}')}"
+            f"\n   Товар: {order['product_name']}"
+            f"\n   Кількість: {order['quantity']} шт."
+            f"\n   Сума: {float(order['total_price']):.2f} грн"
+            f"\n   Статус: {status}"
+            f"\n   Дата: {order['created_at']}\n\n"
+        )
+    
+    await message.answer(orders_text, reply_markup=get_my_orders_keyboard())
 
 
-@router.message(F.text == "📚 Категории", IsUserFilter())
+@router.message(F.text == "📚 Категорії", IsUserFilter())
 async def handle_categories_button(message: Message) -> None:
-    """Обработчик кнопки категории."""
+    """Обробник кнопки категорії."""
     categories = await db.get_categories()
     
     if not categories:
-        await message.answer("😔 Категории не найдены.")
+        await message.answer("😔 Категорії не знайдені.")
         return
     
-    categories_text = f"📚 {html.bold('Категории товаров:')}\n\n"
+    categories_text = f"📚 {html.bold('Категорії товарів:')}\n\n"
     categories_list = "\n".join([f"• {cat}" for cat in categories])
     
     await message.answer(f"{categories_text}{categories_list}")
 
 
-@router.message(F.text == "❓ Помощь", IsUserFilter())
+@router.message(F.text == "❓ Допомога", IsUserFilter())
 async def handle_help_button(message: Message) -> None:
-    """Обработчик кнопки помощь."""
+    """Обробник кнопки допомога."""
     help_text = (
-        f"📋 {html.bold('Доступные команды:')}\n\n"
-        f"/start - Начать заново\n"
-        f"/help - Это сообщение\n"
-        f"/info - Информация о боте\n"
-        f"/catalog - Просмотр каталога\n"
-        f"/order - Оформить заказ\n"
-        f"/myorders - Мои заказы\n"
-        f"/generate - AI генератор изображений\n\n"
-        f"💡 Используйте кнопки меню ниже для быстрого доступа!"
+        f"📋 {html.bold('Доступні команди:')}\n\n"
+        f"/start - Почати заново\n"
+        f"/help - Це повідомлення\n"
+        f"/info - Інформація про бота\n"
+        f"/catalog - Перегляд каталогу\n"
+        f"/order - Оформити замовлення\n"
+        f"/myorders - Мої замовлення\n"
+        f"/generate - AI генератор зображень\n\n"
+        f"💡 Використовуйте кнопки меню нижче для швидкого доступу!"
     )
     await message.answer(help_text)
 
 
-@router.message(F.text == "ℹ️ О магазине", IsUserFilter())
+@router.message(F.text == "ℹ️ Про магазин", IsUserFilter())
 async def handle_about_button(message: Message) -> None:
-    """Обработчик кнопки о магазине."""
+    """Обробник кнопки про магазин."""
     info_text = (
-        f"ℹ️ {html.bold('Информация о боте')}\n\n"
-        f"🤖 Название: Магазин верхнього одягу\n"
-        f"📦 Версия: 1.0\n"
-        f"🛠 Технологии: Python 3.14, Aiogram 3.0, PostgreSQL\n\n"
-        f"📝 {html.bold('Функционал:')}\n"
-        f"• Просмотр каталога товаров\n"
-        f"• Оформление заказов\n"
-        f"• Отслеживание статуса заказов\n"
-        f"• Поиск по категориям\n"
-        f"• AI генератор изображений\n\n"
-        f"📞 {html.bold('Контакты:')}\n"
+        f"ℹ️ {html.bold('Інформація про бота')}\n\n"
+        f"🤖 Назва: Магазин верхнього одягу\n"
+        f"📦 Версія: 1.0\n"
+        f"🛠 Технології: Python 3.13, Aiogram 3.0, PostgreSQL\n\n"
+        f"📝 {html.bold('Функціонал:')}\n"
+        f"• Перегляд каталогу товарів\n"
+        f"• Оформлення замовлень\n"
+        f"• Відстеження статусу замовлень\n"
+        f"• Пошук за категоріями\n"
+        f"• AI генератор зображень\n\n"
+        f"📞 {html.bold('Контакти:')}\n"
         f"📧 Email: shop@example.com\n"
         f"📱 Телефон: +380 XX XXX XX XX\n"
-        f"🕐 Часы работы: 9:00 - 21:00 (ежедневно)\n\n"
-        f"🚚 Бесплатная доставка от 1000 грн!"
+        f"🕐 Години роботи: 9:00 - 21:00 (щодня)\n\n"
+        f"🚚 Безкоштовна доставка від 1000 грн!"
     )
     await message.answer(info_text)
 
 
 @router.message(F.text == "🎨 AI")
 async def handle_ai_button(message: Message) -> None:
-    """Обработчик кнопки AI генератора."""
+    """Обробник кнопки AI генератора."""
     await message.answer(
-        "🎨 Для использования AI генератора используйте команду /generate"
+        "🎨 Для використання AI генератора використовуйте команду /generate"
     )
 
 
-@router.message(F.text == "⚙️ Администратор")
+@router.message(F.text == "⚙️ Адміністратор")
 async def handle_admin_button(message: Message) -> None:
-    """Обработчик кнопки администратор."""
+    """Обробник кнопки адміністратор."""
     if message.from_user.id not in ADMIN_IDS:
-        await message.answer("❌ У вас нет доступа к администраторской панели.")
+        await message.answer("❌ У вас нема доступу до панелі адміністратора.")
         return
     
     await message.answer(
-        "⚙️ Для доступа к администраторской панели используйте команду /admin"
+        "⚙️ Для доступу до панелі адміністратора використовуйте команду /admin"
     )
 
 
@@ -222,39 +243,53 @@ async def command_my_orders_handler(message: Message) -> None:
 
 @router.callback_query(F.data.startswith("listen_product:"), IsUserCallbackFilter())
 async def listen_product_callback(callback: CallbackQuery) -> None:
-    """Обработчик для озвучивания описания товара."""
+    """Обробник для озвучування опису товару."""
     try:
         product_id = int(callback.data.split(":")[1])
         product = await db.get_product_by_id(product_id)
         
         if not product:
-            await callback.answer("❌ Товар не найден", show_alert=True)
+            await callback.answer("❌ Товар не знайдено", show_alert=True)
             return
         
-        # Показываем статус обработки
-        await callback.answer("🔊 Генерирую аудиофайл...")
+        # Показуємо статус обробки
+        await callback.answer("🔊 Генерую аудіофайл...")
         
-        # Подготавливаем текст для озвучивания
+        # Підготовляємо текст для озвучування
         tts_text = get_product_description_for_tts(product)
         
-        # Генерируем аудиофайл
+        # Генеруємо аудіофайл
         audio_buffer = await text_to_speech(tts_text, language="uk")
         
         if audio_buffer:
-            # Отправляем аудиофайл
+            # Відправляємо аудіофайл
             await callback.message.answer_voice(
                 voice=audio_buffer,
-                caption=f"🔊 Информация о товаре '{product['name']}'"
+                caption=f"🔊 Інформація про товар '{product['name']}'"
             )
             logger.info(f"Product audio sent for product_id={product_id}")
         else:
             await callback.message.answer(
-                "❌ Ошибка при генерации аудио. Попробуйте позже."
+                "❌ Помилка при генерації аудіо. Спробуйте пізніше."
             )
         
     except Exception as e:
         logger.error(f"Error in listen_product_callback: {e}", exc_info=True)
-        await callback.answer("❌ Ошибка при обработке запроса", show_alert=True)
+        await callback.answer("❌ Помилка при обробці запиту", show_alert=True)
+
+
+@router.callback_query(F.data == "back_to_start", IsUserCallbackFilter())
+async def back_to_start(callback: CallbackQuery) -> None:
+    """Обробник кнопки повернення на початок."""
+    is_admin = callback.from_user.id in ADMIN_IDS
+    menu = get_admin_menu() if is_admin else get_main_menu()
+    
+    await callback.message.answer(
+        f"👋 Вітаємо, {html.bold(callback.from_user.full_name)}!\n\n"
+        f"🧥 Ласкаво просимо до нашого магазину верхнього одягу!",
+        reply_markup=menu
+    )
+    await callback.answer()
 
 
 @router.callback_query(F.data.startswith("product:"), IsUserCallbackFilter())

@@ -11,6 +11,10 @@ def get_products_keyboard(products):
             callback_data=f"product:{product['id']}"
         )
     builder.adjust(1)
+    builder.button(
+        text="🏠 На початок",
+        callback_data="back_to_start"
+    )
     return builder.as_markup()
 
 
@@ -23,6 +27,10 @@ def get_order_keyboard(products):
             callback_data=f"order_product:{product['id']}"
         )
     builder.adjust(1)
+    builder.button(
+        text="🏠 На початок",
+        callback_data="back_to_start"
+    )
     return builder.as_markup()
 
 
@@ -41,6 +49,10 @@ def get_product_details_keyboard(product_id):
         text="◀️ Назад до каталогу",
         callback_data="back_to_catalog"
     )
+    builder.button(
+        text="🏠 На початок",
+        callback_data="back_to_start"
+    )
     builder.adjust(1)
     return builder.as_markup()
 
@@ -56,6 +68,10 @@ def get_order_confirmation_keyboard():
         text="📦 Мої замовлення",
         callback_data="my_orders"
     )
+    builder.button(
+        text="🏠 На початок",
+        callback_data="back_to_start"
+    )
     builder.adjust(1)
     return builder.as_markup()
 
@@ -66,6 +82,10 @@ def get_my_orders_keyboard():
     builder.button(
         text="🛍 Замовити ще",
         callback_data="back_to_catalog"
+    )
+    builder.button(
+        text="🏠 На початок",
+        callback_data="back_to_start"
     )
     builder.adjust(1)
     return builder.as_markup()
