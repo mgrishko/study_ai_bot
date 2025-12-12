@@ -282,47 +282,6 @@ async def product_details_callback(callback: CallbackQuery) -> None:
     await callback.answer()
 
 
-@router.callback_query(F.data.startswith("order_product:"), IsUserCallbackFilter())
-async def order_product_callback(callback: CallbackQuery) -> None:
-    """Обробник callback для оформлення замовлення товару."""
-    product_id = int(callback.data.split(":")[1])
-    product = await db.get_product_by_id(product_id)
-    
-    if not product:
-        await callback.answer("❌ Товар не знайдено", show_alert=True)
-        return
-    
-    if product['stock'] < 1:
-        await callback.answer("❌ Товар закінчився на складі", show_alert=True)
-        return
-    
-    order_id = await db.create_order(
-        user_id=callback.from_user.id,
-        user_name=callback.from_user.full_name,
-        product_id=product_id,
-        quantity=1
-    )
-    
-    if order_id:
-        confirmation_text = (
-            f"✅ {html.bold('Замовлення оформлено!')}\n\n"
-            f"📋 Номер замовлення: #{order_id}\n"
-            f"🛍 Товар: {product['name']}\n"
-            f"💰 Сума: {float(product['price']):.2f} грн\n"
-            f"📦 Кількість: 1 шт.\n\n"
-            f"Дякуємо за замовлення! Наш менеджер зв'яжеться з вами найближчим часом.\n\n"
-            f"Ви можете переглянути свої замовлення командою /myorders"
-        )
-        
-        await callback.message.edit_text(
-            confirmation_text, 
-            reply_markup=get_order_confirmation_keyboard()
-        )
-        await callback.answer("🎉 Замовлення успішно оформлено!")
-    else:
-        await callback.answer("❌ Помилка оформлення замовлення", show_alert=True)
-
-
 @router.callback_query(F.data == "back_to_catalog", IsUserCallbackFilter())
 async def back_to_catalog_callback(callback: CallbackQuery) -> None:
     """Обробник callback для повернення до каталогу."""
