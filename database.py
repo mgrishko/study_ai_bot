@@ -64,6 +64,8 @@ class Database:
                     product_id INTEGER NOT NULL,
                     quantity INTEGER DEFAULT 1,
                     total_price NUMERIC(10, 2) NOT NULL,
+                    phone TEXT,
+                    email TEXT,
                     status TEXT DEFAULT 'pending',
                     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                     FOREIGN KEY (product_id) REFERENCES products (id)
@@ -77,9 +79,14 @@ class Database:
                     username TEXT,
                     first_name TEXT,
                     last_name TEXT,
+                    phone TEXT,
+                    email TEXT,
                     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
                 )
             """)
+            
+            # Додаємо колонки телефону та email якщо вони не існують
+            await self._migrate_contact_columns(conn)
             
             # Додаємо початкові товари, якщо база порожня
             await self._add_initial_products(conn)
@@ -105,6 +112,59 @@ class Database:
                 products
             )
     
+    async def _migrate_contact_columns(self, conn: asyncpg.Connection):
+        """Додає колонки телефону та email якщо вони не існують (для міграції існуючих БД)."""
+        try:
+            # Перевіряємо чи існує колона phone в таблиці orders
+            has_phone = await conn.fetchval(
+                """SELECT EXISTS(
+                    SELECT 1 FROM information_schema.columns 
+                    WHERE table_name='orders' AND column_name='phone'
+                )"""
+            )
+            
+            if not has_phone:
+                await conn.execute("ALTER TABLE orders ADD COLUMN phone TEXT")
+                logger.info("Added phone column to orders table")
+            
+            # Перевіряємо чи існує колона email в таблиці orders
+            has_email = await conn.fetchval(
+                """SELECT EXISTS(
+                    SELECT 1 FROM information_schema.columns 
+                    WHERE table_name='orders' AND column_name='email'
+                )"""
+            )
+            
+            if not has_email:
+                await conn.execute("ALTER TABLE orders ADD COLUMN email TEXT")
+                logger.info("Added email column to orders table")
+            
+            # Перевіряємо колонки в таблиці users
+            has_user_phone = await conn.fetchval(
+                """SELECT EXISTS(
+                    SELECT 1 FROM information_schema.columns 
+                    WHERE table_name='users' AND column_name='phone'
+                )"""
+            )
+            
+            if not has_user_phone:
+                await conn.execute("ALTER TABLE users ADD COLUMN phone TEXT")
+                logger.info("Added phone column to users table")
+            
+            has_user_email = await conn.fetchval(
+                """SELECT EXISTS(
+                    SELECT 1 FROM information_schema.columns 
+                    WHERE table_name='users' AND column_name='email'
+                )"""
+            )
+            
+            if not has_user_email:
+                await conn.execute("ALTER TABLE users ADD COLUMN email TEXT")
+                logger.info("Added email column to users table")
+        
+        except Exception as e:
+            logger.warning(f"Migration error (may be normal for new DB): {e}")
+    
     async def get_all_products(self) -> List[Dict]:
         """Отримати всі товари."""
         async with self.pool.acquire() as conn:
@@ -126,8 +186,22 @@ class Database:
             )
             return [dict(row) for row in rows]
     
-    async def create_order(self, user_id: int, user_name: str, product_id: int, quantity: int = 1) -> Optional[int]:
-        """Створити нове замовлення."""
+    async def create_order(self, user_id: int, user_name: str, product_id: int, quantity: int = 1, 
+                          phone: str = None, email: str = None) -> Optional[int]:
+        """
+        Створити нове замовлення.
+        
+        Args:
+            user_id: ID користувача
+            user_name: Ім'я користувача
+            product_id: ID товару
+            quantity: Кількість (за замовчуванням 1)
+            phone: Телефон користувача (опціонально)
+            email: Email користувача (опціонально)
+            
+        Returns:
+            ID замовлення або None якщо помилка
+        """
         async with self.pool.acquire() as conn:
             # Перевіряємо наявність товару
             product = await self.get_product_by_id(product_id)
@@ -138,11 +212,11 @@ class Database:
             
             # Використовуємо транзакцію для атомарності операцій
             async with conn.transaction():
-                # Створюємо замовлення
+                # Створюємо замовлення з контактною інформацією
                 order_id = await conn.fetchval(
-                    """INSERT INTO orders (user_id, user_name, product_id, quantity, total_price, status) 
-                       VALUES ($1, $2, $3, $4, $5, 'pending') RETURNING id""",
-                    user_id, user_name, product_id, quantity, total_price
+                    """INSERT INTO orders (user_id, user_name, product_id, quantity, total_price, phone, email, status) 
+                       VALUES ($1, $2, $3, $4, $5, $6, $7, 'pending') RETURNING id""",
+                    user_id, user_name, product_id, quantity, total_price, phone, email
                 )
                 
                 # Зменшуємо кількість товару на складі
