@@ -39,7 +39,7 @@ class TestOrderProductWithContactStart:
         state.set_state = AsyncMock()
         
         # Замінюємо db на реальний від fixture
-        with patch('handlers.user.db', db_clean):
+        with patch('handlers.user.orders.db', db_clean):
             await order_product_with_contact_start(callback, state)
             
             # Перевіряємо що стан встановлено на waiting_for_phone
@@ -62,7 +62,7 @@ class TestOrderProductWithContactStart:
         
         state = AsyncMock(spec=FSMContext)
         
-        with patch('handlers.user.db', db_clean):
+        with patch('handlers.user.orders.db', db_clean):
             await order_product_with_contact_start(callback, state)
             
             # Перевіряємо що показана помилка
@@ -87,7 +87,7 @@ class TestOrderProductWithContactStart:
         
         state = AsyncMock(spec=FSMContext)
         
-        with patch('handlers.user.db', db_clean):
+        with patch('handlers.user.orders.db', db_clean):
             await order_product_with_contact_start(callback, state)
             
             # Перевіряємо що показана помилка про закінчення товара
@@ -251,7 +251,7 @@ class TestConfirmOrderWithContact:
         })
         state.clear = AsyncMock()
         
-        with patch('handlers.user.db', db_clean):
+        with patch('handlers.user.orders.db', db_clean):
             await confirm_order_with_contact(message, state)
             
             # Перевіряємо що замовлення створено в реальній БД
@@ -293,7 +293,7 @@ class TestConfirmOrderWithContact:
         })
         state.clear = AsyncMock()
         
-        with patch('handlers.user.db', db_clean):
+        with patch('handlers.user.orders.db', db_clean):
             await confirm_order_with_contact(message, state)
             
             # Перевіряємо що замовлення створено в реальній БД
@@ -346,7 +346,7 @@ class TestConfirmOrderWithContact:
         })
         state.clear = AsyncMock()
         
-        with patch('handlers.user.db', db_clean):
+        with patch('handlers.user.orders.db', db_clean):
             await confirm_order_with_contact(message, state)
             
             # Замовлення не повинно бути створено через недостатність товару

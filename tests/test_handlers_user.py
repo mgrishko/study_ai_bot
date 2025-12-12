@@ -73,8 +73,8 @@ class TestCatalogButtonHandler:
         # test_products fixture має 3 товари в БД
         assert len(test_products) == 3
         
-        with patch('handlers.user.db.get_all_products', new_callable=AsyncMock) as mock_get:
-            with patch('handlers.user.get_products_keyboard') as mock_keyboard:
+        with patch('handlers.user.menu.db.get_all_products', new_callable=AsyncMock) as mock_get:
+            with patch('keyboards.get_products_keyboard') as mock_keyboard:
                 mock_get.return_value = test_products
                 mock_keyboard.return_value = MagicMock()
                 
@@ -92,7 +92,7 @@ class TestCatalogButtonHandler:
         """Тест кнопки каталогу коли товарів немає."""
         message = create_mock_message("🛍️ Каталог")
         
-        with patch('handlers.user.db', db_clean):
+        with patch('handlers.user.menu.db', db_clean):
             await handle_catalog_button(message)
             
             # Система завжди має базові товари - повідомлення відправлено
@@ -107,8 +107,8 @@ class TestMyOrdersButtonHandler:
         """Тест кнопки мої замовлення коли замовлення є."""
         message = create_mock_message("📦 Мої замовлення", user_id=123)
         
-        with patch('handlers.user.db', db_clean):
-            with patch('handlers.user.get_my_orders_keyboard') as mock_keyboard:
+        with patch('handlers.user.menu.db', db_clean):
+            with patch('keyboards.get_my_orders_keyboard') as mock_keyboard:
                 mock_keyboard.return_value = MagicMock()
                 
                 await handle_my_orders_button(message)
@@ -121,7 +121,7 @@ class TestMyOrdersButtonHandler:
         """Тест кнопки мої замовлення коли замовлень немає."""
         message = create_mock_message("📦 Мої замовлення", user_id=123)
         
-        with patch('handlers.user.db', db_clean):
+        with patch('handlers.user.menu.db', db_clean):
             await handle_my_orders_button(message)
             
             # Перевіряємо що повідомлення відправлено
@@ -153,7 +153,7 @@ class TestCategoriesButtonHandler:
         
         message = create_mock_message("📚 Категорії")
         
-        with patch('handlers.user.db', db_clean):
+        with patch('handlers.user.menu.db', db_clean):
             await handle_categories_button(message)
             
             # Перевіряємо повідомлення з клавіатурою
@@ -168,7 +168,7 @@ class TestCategoriesButtonHandler:
         """Тест кнопки категорій коли категорій немає."""
         message = create_mock_message("📚 Категорії")
         
-        with patch('handlers.user.db', db_clean):
+        with patch('handlers.user.menu.db', db_clean):
             await handle_categories_button(message)
             
             # Перевіряємо повідомлення
@@ -246,7 +246,7 @@ class TestAdminButtonHandler:
         admin_id = ADMIN_IDS[0] if ADMIN_IDS else 999
         message = create_mock_message("⚙️ Адміністратор", user_id=admin_id)
         
-        with patch('handlers.user.ADMIN_IDS', [admin_id]):
+        with patch('handlers.user.menu.ADMIN_IDS', [admin_id]):
             await handle_admin_button(message)
             
             # Перевіряємо що команда /admin згадується
@@ -259,7 +259,7 @@ class TestAdminButtonHandler:
         """Тест кнопки адміністратор для звичайного користувача."""
         message = create_mock_message("⚙️ Адміністратор", user_id=999)
         
-        with patch('handlers.user.ADMIN_IDS', [111]):  # Інший ID
+        with patch('handlers.user.menu.ADMIN_IDS', [111]):  # Інший ID
             await handle_admin_button(message)
             
             # Перевіряємо що доступ заборонено
@@ -286,8 +286,8 @@ class TestCommandCatalogHandler:
             {'id': 2, 'name': 'Product 2', 'price': 200}
         ]
         
-        with patch('handlers.user.db.get_all_products', new_callable=AsyncMock) as mock_get:
-            with patch('handlers.user.get_products_keyboard') as mock_keyboard:
+        with patch('handlers.user.catalog.db.get_all_products', new_callable=AsyncMock) as mock_get:
+            with patch('keyboards.get_products_keyboard') as mock_keyboard:
                 mock_get.return_value = mock_products
                 mock_keyboard.return_value = MagicMock()
                 
@@ -301,7 +301,7 @@ class TestCommandCatalogHandler:
         """Тест команди /catalog без товарів."""
         message = create_mock_message("/catalog")
         
-        with patch('handlers.user.db.get_all_products', new_callable=AsyncMock) as mock_get:
+        with patch('handlers.user.catalog.db.get_all_products', new_callable=AsyncMock) as mock_get:
             mock_get.return_value = []
             
             await command_catalog_handler(message)
@@ -321,8 +321,8 @@ class TestCommandOrderHandler:
         
         mock_products = [{'id': 1, 'name': 'Product 1', 'price': 100}]
         
-        with patch('handlers.user.db.get_all_products', new_callable=AsyncMock) as mock_get:
-            with patch('handlers.user.get_order_keyboard') as mock_keyboard:
+        with patch('handlers.user.catalog.db.get_all_products', new_callable=AsyncMock) as mock_get:
+            with patch('keyboards.get_order_keyboard') as mock_keyboard:
                 mock_get.return_value = mock_products
                 mock_keyboard.return_value = MagicMock()
                 
@@ -336,7 +336,7 @@ class TestCommandOrderHandler:
         """Тест команди /order без товарів."""
         message = create_mock_message("/order")
         
-        with patch('handlers.user.db.get_all_products', new_callable=AsyncMock) as mock_get:
+        with patch('handlers.user.catalog.db.get_all_products', new_callable=AsyncMock) as mock_get:
             mock_get.return_value = []
             
             await command_order_handler(message)
@@ -352,8 +352,8 @@ class TestCommandCategoriesHandler:
         """Тест команди /categories з категоріями."""
         message = create_mock_message("/categories")
         
-        with patch('handlers.user.db.get_categories', new_callable=AsyncMock) as mock_get_cat:
-            with patch('handlers.user.db.get_products_by_category', new_callable=AsyncMock) as mock_get_prod:
+        with patch('handlers.user.catalog.db.get_categories', new_callable=AsyncMock) as mock_get_cat:
+            with patch('handlers.user.catalog.db.get_products_by_category', new_callable=AsyncMock) as mock_get_prod:
                 mock_get_cat.return_value = ['Category 1', 'Category 2']
                 mock_get_prod.side_effect = [[{'id': 1}], [{'id': 2}, {'id': 3}]]
                 
@@ -372,7 +372,7 @@ class TestCommandCategoriesHandler:
         """Тест команди /categories без категорій."""
         message = create_mock_message("/categories")
         
-        with patch('handlers.user.db.get_categories', new_callable=AsyncMock) as mock_get:
+        with patch('handlers.user.catalog.db.get_categories', new_callable=AsyncMock) as mock_get:
             mock_get.return_value = []
             
             await command_categories_handler(message)
@@ -399,7 +399,7 @@ class TestCommandMyOrdersHandler:
             }
         ]
         
-        with patch('handlers.user.db.get_user_orders', new_callable=AsyncMock) as mock_get:
+        with patch('handlers.user.orders.db.get_user_orders', new_callable=AsyncMock) as mock_get:
             mock_get.return_value = mock_orders
             
             await command_my_orders_handler(message)
@@ -417,7 +417,7 @@ class TestCommandMyOrdersHandler:
         """Тест команди /myorders без замовлень."""
         message = create_mock_message("/myorders", user_id=123)
         
-        with patch('handlers.user.db.get_user_orders', new_callable=AsyncMock) as mock_get:
+        with patch('handlers.user.orders.db.get_user_orders', new_callable=AsyncMock) as mock_get:
             mock_get.return_value = []
             
             await command_my_orders_handler(message)
@@ -450,7 +450,7 @@ class TestCommandMyOrdersHandler:
             }
         ]
         
-        with patch('handlers.user.db.get_user_orders', new_callable=AsyncMock) as mock_get:
+        with patch('handlers.user.orders.db.get_user_orders', new_callable=AsyncMock) as mock_get:
             mock_get.return_value = mock_orders
             
             await command_my_orders_handler(message)
@@ -485,8 +485,8 @@ class TestProductDetailsCallback:
             'stock': 10
         }
         
-        with patch('handlers.user.db.get_product_by_id', new_callable=AsyncMock) as mock_get:
-            with patch('handlers.user.get_product_details_keyboard') as mock_keyboard:
+        with patch('handlers.user.products.db.get_product_by_id', new_callable=AsyncMock) as mock_get:
+            with patch('keyboards.get_product_details_keyboard') as mock_keyboard:
                 mock_get.return_value = mock_product
                 mock_keyboard.return_value = MagicMock()
                 
@@ -505,7 +505,7 @@ class TestProductDetailsCallback:
         """Тест отримання деталей неіснуючого товару."""
         callback = create_mock_callback("product:999")
         
-        with patch('handlers.user.db.get_product_by_id', new_callable=AsyncMock) as mock_get:
+        with patch('handlers.user.products.db.get_product_by_id', new_callable=AsyncMock) as mock_get:
             mock_get.return_value = None
             
             await product_details_callback(callback)
@@ -532,9 +532,9 @@ class TestListenProductCallback:
             'category': 'Category'
         }
         
-        with patch('handlers.user.db.get_product_by_id', new_callable=AsyncMock) as mock_get:
-            with patch('handlers.user.text_to_speech', new_callable=AsyncMock) as mock_tts:
-                with patch('handlers.user.get_product_description_for_tts') as mock_desc:
+        with patch('handlers.user.products.db.get_product_by_id', new_callable=AsyncMock) as mock_get:
+            with patch('handlers.user.products.text_to_speech', new_callable=AsyncMock) as mock_tts:
+                with patch('handlers.user.products.get_product_description_for_tts') as mock_desc:
                     mock_get.return_value = mock_product
                     mock_tts.return_value = b'audio_data'
                     mock_desc.return_value = "Test Product Description"
@@ -550,7 +550,7 @@ class TestListenProductCallback:
         """Тест озвучування неіснуючого товару."""
         callback = create_mock_callback("listen_product:999")
         
-        with patch('handlers.user.db.get_product_by_id', new_callable=AsyncMock) as mock_get:
+        with patch('handlers.user.products.db.get_product_by_id', new_callable=AsyncMock) as mock_get:
             mock_get.return_value = None
             
             await listen_product_callback(callback)
@@ -572,9 +572,9 @@ class TestListenProductCallback:
             'category': 'Category'
         }
         
-        with patch('handlers.user.db.get_product_by_id', new_callable=AsyncMock) as mock_get:
-            with patch('handlers.user.text_to_speech', new_callable=AsyncMock) as mock_tts:
-                with patch('handlers.user.get_product_description_for_tts') as mock_desc:
+        with patch('handlers.user.products.db.get_product_by_id', new_callable=AsyncMock) as mock_get:
+            with patch('handlers.user.products.text_to_speech', new_callable=AsyncMock) as mock_tts:
+                with patch('handlers.user.products.get_product_description_for_tts') as mock_desc:
                     mock_get.return_value = mock_product
                     mock_tts.return_value = None  # TTS failure
                     mock_desc.return_value = "Test"
@@ -599,8 +599,8 @@ class TestBackToCatalogCallback:
             {'id': 2, 'name': 'Product 2', 'price': 200}
         ]
         
-        with patch('handlers.user.db.get_all_products', new_callable=AsyncMock) as mock_get:
-            with patch('handlers.user.get_products_keyboard') as mock_keyboard:
+        with patch('handlers.user.catalog.db.get_all_products', new_callable=AsyncMock) as mock_get:
+            with patch('handlers.user.catalog.get_products_keyboard') as mock_keyboard:
                 mock_get.return_value = mock_products
                 mock_keyboard.return_value = MagicMock()
                 
@@ -614,7 +614,7 @@ class TestBackToCatalogCallback:
         """Тест повернення до каталогу без товарів."""
         callback = create_mock_callback("back_to_catalog")
         
-        with patch('handlers.user.db.get_all_products', new_callable=AsyncMock) as mock_get:
+        with patch('handlers.user.catalog.db.get_all_products', new_callable=AsyncMock) as mock_get:
             mock_get.return_value = []
             
             await back_to_catalog_callback(callback)
@@ -642,8 +642,8 @@ class TestMyOrdersCallback:
             }
         ]
         
-        with patch('handlers.user.db.get_user_orders', new_callable=AsyncMock) as mock_get:
-            with patch('handlers.user.get_my_orders_keyboard') as mock_keyboard:
+        with patch('handlers.user.orders.db.get_user_orders', new_callable=AsyncMock) as mock_get:
+            with patch('keyboards.get_my_orders_keyboard') as mock_keyboard:
                 mock_get.return_value = mock_orders
                 mock_keyboard.return_value = MagicMock()
                 
@@ -657,7 +657,7 @@ class TestMyOrdersCallback:
         """Тест мої замовлення callback без замовлень."""
         callback = create_mock_callback("my_orders", user_id=123)
         
-        with patch('handlers.user.db.get_user_orders', new_callable=AsyncMock) as mock_get:
+        with patch('handlers.user.orders.db.get_user_orders', new_callable=AsyncMock) as mock_get:
             mock_get.return_value = []
             
             await my_orders_callback(callback)
@@ -681,8 +681,8 @@ class TestMyOrdersCallback:
             }
         ]
         
-        with patch('handlers.user.db.get_user_orders', new_callable=AsyncMock) as mock_get:
-            with patch('handlers.user.get_my_orders_keyboard') as mock_keyboard:
+        with patch('handlers.user.orders.db.get_user_orders', new_callable=AsyncMock) as mock_get:
+            with patch('keyboards.get_my_orders_keyboard') as mock_keyboard:
                 mock_get.return_value = mock_orders
                 mock_keyboard.return_value = MagicMock()
                 

@@ -38,7 +38,7 @@ class TestCommandAdminHandler:
         message.from_user = MagicMock(id=12345)
         message.answer = AsyncMock()
         
-        with patch('handlers.admin.get_admin_main_keyboard') as mock_keyboard:
+        with patch('handlers.admin.main.get_admin_main_keyboard') as mock_keyboard:
             mock_keyboard.return_value = MagicMock()
             await command_admin_handler(message)
         
@@ -60,7 +60,7 @@ class TestAdminMainCallback:
         callback.message.edit_text = AsyncMock()
         callback.answer = AsyncMock()
         
-        with patch('handlers.admin.get_admin_main_keyboard') as mock_keyboard:
+        with patch('handlers.admin.main.get_admin_main_keyboard') as mock_keyboard:
             mock_keyboard.return_value = MagicMock()
             await admin_main_callback(callback)
         
@@ -82,8 +82,8 @@ class TestAdminStatsCallback:
         callback.message.edit_text = AsyncMock()
         callback.answer = AsyncMock()
         
-        with patch('handlers.admin.db', db_clean):
-            with patch('handlers.admin.get_admin_main_keyboard') as mock_keyboard:
+        with patch('handlers.admin.main.db', db_clean):
+            with patch('handlers.admin.main.get_admin_main_keyboard') as mock_keyboard:
                 mock_keyboard.return_value = MagicMock()
                 await admin_stats_callback(callback)
         
@@ -107,7 +107,7 @@ class TestAdminOrdersCallback:
         callback.message.edit_text = AsyncMock()
         callback.answer = AsyncMock()
         
-        with patch('handlers.admin.get_admin_orders_keyboard') as mock_keyboard:
+        with patch('handlers.admin.orders.get_admin_orders_keyboard') as mock_keyboard:
             mock_keyboard.return_value = MagicMock()
             await admin_orders_callback(callback)
         
@@ -127,7 +127,7 @@ class TestAdminProductsCallback:
         callback.message.edit_text = AsyncMock()
         callback.answer = AsyncMock()
         
-        with patch('handlers.admin.get_admin_products_keyboard') as mock_keyboard:
+        with patch('handlers.admin.products.menu.get_admin_products_keyboard') as mock_keyboard:
             mock_keyboard.return_value = MagicMock()
             await admin_products_callback(callback)
         
@@ -164,9 +164,9 @@ class TestAdminUsersCallback:
         mock_pool_context.__aenter__ = AsyncMock(return_value=mock_conn)
         mock_pool_context.__aexit__ = AsyncMock(return_value=None)
         
-        with patch('handlers.admin.db.pool') as mock_pool:
+        with patch('handlers.admin.users.db.pool') as mock_pool:
             mock_pool.acquire = MagicMock(return_value=mock_pool_context)
-            with patch('handlers.admin.get_admin_main_keyboard') as mock_keyboard:
+            with patch('handlers.admin.main.get_admin_main_keyboard') as mock_keyboard:
                 mock_keyboard.return_value = MagicMock()
                 await admin_users_callback(callback)
         
@@ -284,8 +284,8 @@ class TestProcessProductPrice:
         
         mock_categories = ['Electronics', 'Smartphones']
         
-        with patch('handlers.admin.db.get_categories', return_value=mock_categories):
-            with patch('handlers.admin.InlineKeyboardBuilder'):
+        with patch('handlers.admin.products.add.db.get_categories', return_value=mock_categories):
+            with patch('handlers.admin.products.add.InlineKeyboardBuilder'):
                 await process_product_price(message, state)
         
         state.update_data.assert_called_once_with(price=2500.50)
@@ -300,7 +300,7 @@ class TestProcessProductPrice:
         state = MagicMock(spec=FSMContext)
         state.update_data = AsyncMock()
         
-        with patch('handlers.admin.db.get_categories', return_value=['Electronics']):
+        with patch('handlers.admin.products.add.db.get_categories', return_value=['Electronics']):
             await process_product_price(message, state)
         
         state.update_data.assert_not_called()
@@ -316,7 +316,7 @@ class TestProcessProductPrice:
         state = MagicMock(spec=FSMContext)
         state.update_data = AsyncMock()
         
-        with patch('handlers.admin.db.get_categories', return_value=['Electronics']):
+        with patch('handlers.admin.products.add.db.get_categories', return_value=['Electronics']):
             await process_product_price(message, state)
         
         state.update_data.assert_not_called()
@@ -332,7 +332,7 @@ class TestProcessProductPrice:
         state = MagicMock(spec=FSMContext)
         state.update_data = AsyncMock()
         
-        with patch('handlers.admin.db.get_categories', return_value=['Electronics']):
+        with patch('handlers.admin.products.add.db.get_categories', return_value=['Electronics']):
             await process_product_price(message, state)
         
         state.update_data.assert_not_called()
@@ -411,7 +411,7 @@ class TestProcessProductImage:
             'image_url': 'https://example.com/image.png'
         })
         
-        with patch('handlers.admin.InlineKeyboardBuilder'):
+        with patch('handlers.admin.products.add.InlineKeyboardBuilder'):
             await process_product_image(message, state)
         
         state.update_data.assert_called_once_with(image_url="https://example.com/image.png")
@@ -435,7 +435,7 @@ class TestProcessProductImage:
             'image_url': None
         })
         
-        with patch('handlers.admin.InlineKeyboardBuilder'):
+        with patch('handlers.admin.products.add.InlineKeyboardBuilder'):
             await process_product_image(message, state)
         
         state.update_data.assert_called_once_with(image_url=None)
@@ -468,8 +468,8 @@ class TestOrderStatusUpdates:
         callback.message.edit_reply_markup = AsyncMock()
         callback.answer = AsyncMock()
         
-        with patch('handlers.admin.db.update_order_status', return_value=AsyncMock()):
-            with patch('handlers.admin.get_order_status_keyboard') as mock_keyboard:
+        with patch('handlers.admin.orders.db.update_order_status', return_value=AsyncMock()):
+            with patch('handlers.admin.orders.get_order_status_keyboard') as mock_keyboard:
                 mock_keyboard.return_value = MagicMock()
                 await admin_confirm_order(callback)
         
@@ -484,8 +484,8 @@ class TestOrderStatusUpdates:
         callback.message.edit_reply_markup = AsyncMock()
         callback.answer = AsyncMock()
         
-        with patch('handlers.admin.db.update_order_status', return_value=AsyncMock()):
-            with patch('handlers.admin.get_order_status_keyboard') as mock_keyboard:
+        with patch('handlers.admin.orders.db.update_order_status', return_value=AsyncMock()):
+            with patch('handlers.admin.orders.get_order_status_keyboard') as mock_keyboard:
                 mock_keyboard.return_value = MagicMock()
                 await admin_ship_order(callback)
         
@@ -500,8 +500,8 @@ class TestOrderStatusUpdates:
         callback.message.edit_reply_markup = AsyncMock()
         callback.answer = AsyncMock()
         
-        with patch('handlers.admin.db.update_order_status', return_value=AsyncMock()):
-            with patch('handlers.admin.get_order_status_keyboard') as mock_keyboard:
+        with patch('handlers.admin.orders.db.update_order_status', return_value=AsyncMock()):
+            with patch('handlers.admin.orders.get_order_status_keyboard') as mock_keyboard:
                 mock_keyboard.return_value = MagicMock()
                 await admin_deliver_order(callback)
         
@@ -516,8 +516,8 @@ class TestOrderStatusUpdates:
         callback.message.edit_reply_markup = AsyncMock()
         callback.answer = AsyncMock()
         
-        with patch('handlers.admin.db.update_order_status', return_value=AsyncMock()):
-            with patch('handlers.admin.get_order_status_keyboard') as mock_keyboard:
+        with patch('handlers.admin.orders.db.update_order_status', return_value=AsyncMock()):
+            with patch('handlers.admin.orders.get_order_status_keyboard') as mock_keyboard:
                 mock_keyboard.return_value = MagicMock()
                 await admin_cancel_order(callback)
         
