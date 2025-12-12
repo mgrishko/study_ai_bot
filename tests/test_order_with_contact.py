@@ -261,8 +261,10 @@ class TestConfirmOrderWithContact:
             assert orders[0]['phone'] == '+380501234567'
             assert orders[0]['email'] == 'user@example.com'
             
-            # Перевіряємо що стан очищено
-            state.clear.assert_called_once()
+            # Перевіряємо що стан оновлено (не очищено, оскільки переходимо до оплати)
+            state.update_data.assert_called_once()
+            state.set_state.assert_called_once()
+            state.clear.assert_not_called()
             
             # Перевіряємо що показано підтвердження
             message.answer.assert_called_once()

@@ -13,6 +13,13 @@ from logger_config import get_logger
 from handlers.payment_states import PaymentStates
 from handlers.order_states import OrderStates
 from payments import LiqPayService
+from utils.payment_helpers import (
+    validate_order_id,
+    get_and_validate_order,
+    get_order_summary_text,
+    handle_payment_error,
+    validate_payment_state
+)
 
 logger = get_logger("aiogram.handlers.payments")
 router = Router()
@@ -28,25 +35,20 @@ liqpay_service = LiqPayService()
 async def proceed_to_payment(callback: CallbackQuery, state: FSMContext) -> None:
     """Handle proceed to payment - show payment method selection."""
     try:
-        data = await state.get_data()
-        
-        if not data.get('order_id'):
-            await callback.answer("❌ Замовлення не знайдено", show_alert=True)
+        # Validate order_id from state
+        order_id, is_valid = await validate_order_id(state)
+        if not is_valid:
+            await handle_payment_error(callback, "❌ Замовлення не знайдено")
             return
         
-        # Get order details
-        order_data = await db.get_order(data['order_id'])
-        
-        if not order_data:
-            await callback.answer("❌ Замовлення не знайдено", show_alert=True)
+        # Validate order exists and belongs to user
+        order_data, is_valid = await get_and_validate_order(order_id, callback.from_user.id)
+        if not is_valid:
+            await handle_payment_error(callback, "❌ Замовлення не знайдено")
             return
         
-        payment_text = (
-            f"💳 {html.bold('Оплата замовлення')}\n\n"
-            f"📦 Замовлення: #{order_data['id']}\n"
-            f"💰 Сума: {float(order_data['total_price']):.2f} грн\n\n"
-            f"Виберіть спосіб оплати:"
-        )
+        # Get formatted order summary
+        payment_text = get_order_summary_text(order_data) + "\n\nВиберіть спосіб оплати:"
         
         await state.set_state(PaymentStates.waiting_for_payment_method)
         
@@ -58,7 +60,7 @@ async def proceed_to_payment(callback: CallbackQuery, state: FSMContext) -> None
         
     except Exception as e:
         logger.error(f"Error in proceed_to_payment: {e}", exc_info=True)
-        await callback.answer("❌ Помилка при обробці платежу", show_alert=True)
+        await handle_payment_error(callback, "❌ Помилка при обробці платежу")
 
 
 @router.callback_query(F.data.startswith("payment_method:"), PaymentStates.waiting_for_payment_method, IsUserCallbackFilter())
@@ -67,18 +69,15 @@ async def select_payment_method(callback: CallbackQuery, state: FSMContext) -> N
     try:
         payment_method = callback.data.split(":")[1]  # 'liqpay' or 'telegram'
         
-        data = await state.get_data()
-        order_id = data.get('order_id')
-        
-        if not order_id:
-            await callback.answer("❌ Замовлення не знайдено", show_alert=True)
+        # Validate order_id from state
+        order_id, is_valid = await validate_order_id(state)
+        if not await validate_payment_state(callback, order_id):
             return
         
-        # Get order details
-        order_data = await db.get_order(order_id)
-        
-        if not order_data:
-            await callback.answer("❌ Замовлення не знайдено", show_alert=True)
+        # Validate order exists and belongs to user
+        order_data, is_valid = await get_and_validate_order(order_id, callback.from_user.id)
+        if not is_valid:
+            await handle_payment_error(callback, "❌ Замовлення не знайдено")
             return
         
         await state.update_data(payment_method=payment_method)
@@ -88,11 +87,11 @@ async def select_payment_method(callback: CallbackQuery, state: FSMContext) -> N
         elif payment_method == "telegram":
             await handle_telegram_payment(callback, state, order_id, order_data)
         else:
-            await callback.answer("❌ Невідомий спосіб оплати", show_alert=True)
+            await handle_payment_error(callback, "❌ Невідомий спосіб оплати")
         
     except Exception as e:
         logger.error(f"Error in select_payment_method: {e}", exc_info=True)
-        await callback.answer("❌ Помилка при обробці платежу", show_alert=True)
+        await handle_payment_error(callback, "❌ Помилка при обробці платежу")
 
 
 async def handle_liqpay_payment(callback: CallbackQuery, state: FSMContext, order_id: int, order_data: dict) -> None:
@@ -198,11 +197,10 @@ async def webhook_test(message: Message) -> None:
 async def payment_retry(callback: CallbackQuery, state: FSMContext) -> None:
     """Allow user to retry payment."""
     try:
-        data = await state.get_data()
-        order_id = data.get('order_id')
-        
-        if not order_id:
-            await callback.answer("❌ Замовлення не знайдено", show_alert=True)
+        # Validate order_id
+        order_id, is_valid = await validate_order_id(state)
+        if not is_valid:
+            await handle_payment_error(callback, "❌ Замовлення не знайдено")
             return
         
         # Reset to payment method selection
@@ -222,7 +220,7 @@ async def payment_retry(callback: CallbackQuery, state: FSMContext) -> None:
         
     except Exception as e:
         logger.error(f"Error in payment_retry: {e}", exc_info=True)
-        await callback.answer("❌ Помилка при обробці платежу", show_alert=True)
+        await handle_payment_error(callback, "❌ Помилка при обробці платежу")
 
 
 @router.callback_query(F.data == "payment_cancel", IsUserCallbackFilter())
