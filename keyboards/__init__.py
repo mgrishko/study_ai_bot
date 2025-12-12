@@ -9,7 +9,12 @@ from keyboards.admin import (
     get_admin_main_keyboard,
     get_admin_orders_keyboard,
     get_admin_products_keyboard,
-    get_order_status_keyboard
+    get_order_status_keyboard,
+    get_order_edit_menu_keyboard,
+    get_order_field_confirmation_keyboard,
+    get_order_status_change_keyboard,
+    get_order_detail_keyboard,
+    get_orders_list_keyboard
 )
 from keyboards.reply import (
     get_main_menu,
@@ -33,6 +38,11 @@ __all__ = [
     "get_admin_orders_keyboard",
     "get_admin_products_keyboard",
     "get_order_status_keyboard",
+    "get_order_edit_menu_keyboard",
+    "get_order_field_confirmation_keyboard",
+    "get_order_status_change_keyboard",
+    "get_order_detail_keyboard",
+    "get_orders_list_keyboard",
     "get_main_menu",
     "get_admin_menu",
     "get_hidden_keyboard",

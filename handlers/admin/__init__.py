@@ -9,7 +9,18 @@ from .orders import (
     admin_confirm_order,
     admin_ship_order,
     admin_deliver_order,
-    admin_cancel_order
+    admin_cancel_order,
+    start_edit_order_callback,
+    choose_edit_field_callback,
+    process_phone_edit,
+    process_email_edit,
+    process_quantity_edit,
+    process_price_edit,
+    process_payment_status_edit,
+    confirm_field_edit_callback,
+    show_status_change_options,
+    change_order_status_callback,
+    show_order_detail_callback
 )
 from .users import router as users_router
 from .users import admin_users_callback
@@ -56,6 +67,17 @@ __all__ = [
     "admin_ship_order",
     "admin_deliver_order",
     "admin_cancel_order",
+    "start_edit_order_callback",
+    "choose_edit_field_callback",
+    "process_phone_edit",
+    "process_email_edit",
+    "process_quantity_edit",
+    "process_price_edit",
+    "process_payment_status_edit",
+    "confirm_field_edit_callback",
+    "show_status_change_options",
+    "change_order_status_callback",
+    "show_order_detail_callback",
     "users_router",
     "admin_users_callback",
     "menu_router",

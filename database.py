@@ -96,6 +96,20 @@ class Database:
                 )
             """)
             
+            # Таблиця логів редагування замовлень
+            await conn.execute("""
+                CREATE TABLE IF NOT EXISTS order_edit_logs (
+                    id SERIAL PRIMARY KEY,
+                    order_id INTEGER NOT NULL,
+                    admin_id BIGINT NOT NULL,
+                    field_name TEXT NOT NULL,
+                    old_value TEXT,
+                    new_value TEXT,
+                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                    FOREIGN KEY (order_id) REFERENCES orders(id) ON DELETE CASCADE
+                )
+            """)
+            
             # Таблиця користувачів
             await conn.execute("""
                 CREATE TABLE IF NOT EXISTS users (
@@ -162,6 +176,30 @@ class Database:
             if not has_email:
                 await conn.execute("ALTER TABLE orders ADD COLUMN email TEXT")
                 logger.info("Added email column to orders table")
+            
+            # Перевіряємо чи існує колона payment_status в таблиці orders
+            has_payment_status = await conn.fetchval(
+                """SELECT EXISTS(
+                    SELECT 1 FROM information_schema.columns 
+                    WHERE table_name='orders' AND column_name='payment_status'
+                )"""
+            )
+            
+            if not has_payment_status:
+                await conn.execute("ALTER TABLE orders ADD COLUMN payment_status TEXT DEFAULT 'unpaid'")
+                logger.info("Added payment_status column to orders table")
+            
+            # Перевіряємо чи існує колона payment_method в таблиці orders
+            has_payment_method = await conn.fetchval(
+                """SELECT EXISTS(
+                    SELECT 1 FROM information_schema.columns 
+                    WHERE table_name='orders' AND column_name='payment_method'
+                )"""
+            )
+            
+            if not has_payment_method:
+                await conn.execute("ALTER TABLE orders ADD COLUMN payment_method TEXT")
+                logger.info("Added payment_method column to orders table")
             
             # Перевіряємо колонки в таблиці users
             has_user_phone = await conn.fetchval(
@@ -272,6 +310,82 @@ class Database:
                 status, order_id
             )
             return True
+    
+    async def get_order(self, order_id: int) -> Optional[Dict]:
+        """Отримати замовлення за ID з деталями товару та користувача."""
+        try:
+            async with self.pool.acquire() as conn:
+                row = await conn.fetchrow(
+                    """SELECT o.id, o.user_id, o.user_name, o.product_id, o.quantity, 
+                              o.total_price, o.phone, o.email, o.status, o.payment_status, 
+                              o.payment_method, o.created_at,
+                              p.name as product_name, p.price as product_price, 
+                              u.username, u.first_name, u.last_name
+                       FROM orders o
+                       JOIN products p ON o.product_id = p.id
+                       LEFT JOIN users u ON o.user_id = u.id
+                       WHERE o.id = $1""",
+                    order_id
+                )
+                return dict(row) if row else None
+        except Exception as e:
+            logger.error(f"Error getting order by ID: {e}", exc_info=True)
+            return None
+    
+    async def update_order(self, order_id: int, **kwargs) -> bool:
+        """Оновити поля замовлення з валідацією дозволених полів."""
+        allowed_fields = {'phone', 'email', 'quantity', 'total_price', 'payment_status', 'user_name'}
+        
+        # Фільтруємо тільки дозволені поля
+        updates = {k: v for k, v in kwargs.items() if k in allowed_fields}
+        
+        if not updates:
+            logger.warning(f"No valid fields to update for order {order_id}")
+            return False
+        
+        try:
+            async with self.pool.acquire() as conn:
+                # Будуємо динамічний SQL запит
+                set_clause = ", ".join([f"{k} = ${i+1}" for i, k in enumerate(updates.keys())])
+                query = f"UPDATE orders SET {set_clause} WHERE id = ${len(updates)+1}"
+                
+                values = list(updates.values()) + [order_id]
+                await conn.execute(query, *values)
+                return True
+        except Exception as e:
+            logger.error(f"Error updating order {order_id}: {e}", exc_info=True)
+            return False
+    
+    async def add_order_edit_log(self, order_id: int, admin_id: int, field_name: str, 
+                                old_value: str, new_value: str) -> bool:
+        """Додати запис до логу редагування замовлення."""
+        try:
+            async with self.pool.acquire() as conn:
+                await conn.execute(
+                    """INSERT INTO order_edit_logs (order_id, admin_id, field_name, old_value, new_value)
+                       VALUES ($1, $2, $3, $4, $5)""",
+                    order_id, admin_id, field_name, old_value, new_value
+                )
+                return True
+        except Exception as e:
+            logger.error(f"Error adding order edit log: {e}", exc_info=True)
+            return False
+    
+    async def get_order_edit_logs(self, order_id: int, limit: int = 10) -> List[Dict]:
+        """Отримати логи редагування замовлення."""
+        try:
+            async with self.pool.acquire() as conn:
+                rows = await conn.fetch(
+                    """SELECT * FROM order_edit_logs 
+                       WHERE order_id = $1 
+                       ORDER BY created_at DESC 
+                       LIMIT $2""",
+                    order_id, limit
+                )
+                return [dict(row) for row in rows]
+        except Exception as e:
+            logger.error(f"Error getting order edit logs: {e}", exc_info=True)
+            return []
     
     async def add_user(self, user_id: int, username: str, first_name: str, last_name: str = None):
         """Додати або оновити користувача."""

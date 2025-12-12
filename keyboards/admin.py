@@ -80,3 +80,85 @@ def get_admin_generate_image_styles_keyboard():
         )
     builder.adjust(2)
     return builder.as_markup()
+
+
+def get_order_edit_menu_keyboard(order_id):
+    """Клавіатура для вибору поля до редагування замовлення."""
+    builder = InlineKeyboardBuilder()
+    builder.button(text="📱 Телефон", callback_data=f"admin_edit_order_field:{order_id}:phone")
+    builder.button(text="📧 Email", callback_data=f"admin_edit_order_field:{order_id}:email")
+    builder.button(text="📦 Кількість", callback_data=f"admin_edit_order_field:{order_id}:quantity")
+    builder.button(text="💰 Ціна", callback_data=f"admin_edit_order_field:{order_id}:price")
+    builder.button(text="💳 Статус оплати", callback_data=f"admin_edit_order_field:{order_id}:payment_status")
+    builder.button(text="◀️ Назад", callback_data=f"admin_order_detail:{order_id}")
+    builder.adjust(2)
+    return builder.as_markup()
+
+
+def get_order_field_confirmation_keyboard(order_id, field_name):
+    """Клавіатура для підтвердження редагування поля замовлення."""
+    builder = InlineKeyboardBuilder()
+    builder.button(text="✅ Зберегти", callback_data=f"admin_confirm_edit:{order_id}:{field_name}")
+    builder.button(text="❌ Скасувати", callback_data=f"admin_edit_order_field:{order_id}:{field_name}")
+    builder.adjust(2)
+    return builder.as_markup()
+
+
+def get_order_status_change_keyboard(order_id, current_status):
+    """Клавіатура для зміни статусу замовлення з врахуванням стан-машини."""
+    builder = InlineKeyboardBuilder()
+    
+    # Дозволені переходи на основі поточного статусу
+    transitions = {
+        'pending': [
+            ("✅ Підтвердити", f"admin_change_order_status:{order_id}:confirmed"),
+            ("❌ Скасувати", f"admin_change_order_status:{order_id}:cancelled")
+        ],
+        'confirmed': [
+            ("🚚 Відправити", f"admin_change_order_status:{order_id}:shipped"),
+            ("❌ Скасувати", f"admin_change_order_status:{order_id}:cancelled")
+        ],
+        'shipped': [
+            ("📬 Доставлено", f"admin_change_order_status:{order_id}:delivered")
+        ],
+        'delivered': [],
+        'cancelled': []
+    }
+    
+    # Додаємо доступні кнопки переходу
+    for text, callback in transitions.get(current_status, []):
+        builder.button(text=text, callback_data=callback)
+    
+    builder.button(text="◀️ Назад", callback_data=f"admin_order_detail:{order_id}")
+    builder.adjust(2)
+    return builder.as_markup()
+
+
+def get_order_detail_keyboard(order_id):
+    """Клавіатура для деталей замовлення з опціями редагування."""
+    builder = InlineKeyboardBuilder()
+    builder.button(text="✏️ Редагувати", callback_data=f"admin_edit_order:{order_id}")
+    builder.button(text="🔄 Змінити статус", callback_data=f"admin_change_status:{order_id}")
+    builder.button(text="◀️ Назад", callback_data="admin_orders")
+    builder.adjust(2)
+    return builder.as_markup()
+
+
+def get_orders_list_keyboard(orders):
+    """Клавіатура зі списком замовлень як інлайн кнопками."""
+    builder = InlineKeyboardBuilder()
+    
+    for order in orders:
+        order_id = order['id']
+        product_name = order['product_name']
+        quantity = order['quantity']
+        button_text = f"#{order_id} {product_name} ({quantity}шт)"
+        builder.button(
+            text=button_text,
+            callback_data=f"admin_order_detail:{order_id}"
+        )
+    
+    builder.button(text="◀️ Назад", callback_data="admin_orders")
+    builder.adjust(1)
+    return builder.as_markup()
+
