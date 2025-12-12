@@ -26,7 +26,8 @@ from handlers.admin import (
     menu_router as admin_menu_router,
     add_router,
     image_router,
-    delete_router
+    delete_router,
+    edit_router
 )
 
 # Combine all admin routers into one
@@ -38,5 +39,6 @@ admin_router.include_router(admin_menu_router)
 admin_router.include_router(add_router)
 admin_router.include_router(image_router)
 admin_router.include_router(delete_router)
+admin_router.include_router(edit_router)
 
 __all__ = ["common_router", "user_router", "admin_router", "ai_router", "payment_router"]

@@ -162,3 +162,34 @@ def get_orders_list_keyboard(orders):
     builder.adjust(1)
     return builder.as_markup()
 
+
+def get_product_edit_fields_keyboard(product_id):
+    """Клавіатура для вибору поля товару до редагування."""
+    builder = InlineKeyboardBuilder()
+    builder.button(text="📝 Назва", callback_data=f"admin_edit_product_field:{product_id}:name")
+    builder.button(text="📖 Опис", callback_data=f"admin_edit_product_field:{product_id}:description")
+    builder.button(text="💰 Ціна", callback_data=f"admin_edit_product_field:{product_id}:price")
+    builder.button(text="🏷 Категорія", callback_data=f"admin_edit_product_field:{product_id}:category")
+    builder.button(text="📦 Кількість", callback_data=f"admin_edit_product_field:{product_id}:stock")
+    builder.button(text="🔗 URL зображення", callback_data=f"admin_edit_product_field:{product_id}:image_url")
+    builder.button(text="◀️ Назад", callback_data="admin_edit_products")
+    builder.adjust(2)
+    return builder.as_markup()
+
+
+def get_product_field_confirmation_keyboard(product_id, field_name):
+    """Клавіатура для підтвердження редагування поля товару."""
+    builder = InlineKeyboardBuilder()
+    builder.button(text="✅ Зберегти", callback_data=f"admin_confirm_edit_product:{product_id}:{field_name}")
+    builder.button(text="❌ Скасувати", callback_data=f"admin_edit_product_field:{product_id}")
+    builder.adjust(2)
+    return builder.as_markup()
+
+
+def get_product_detail_keyboard(product_id):
+    """Клавіатура для деталей товару з опціями редагування."""
+    builder = InlineKeyboardBuilder()
+    builder.button(text="✏️ Редагувати", callback_data=f"admin_edit_product_field:{product_id}")
+    builder.button(text="◀️ Назад", callback_data="admin_edit_products")
+    builder.adjust(2)
+    return builder.as_markup()

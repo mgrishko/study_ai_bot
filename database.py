@@ -110,6 +110,20 @@ class Database:
                 )
             """)
             
+            # Таблиця логів редагування товарів
+            await conn.execute("""
+                CREATE TABLE IF NOT EXISTS product_edit_logs (
+                    id SERIAL PRIMARY KEY,
+                    product_id INTEGER NOT NULL,
+                    admin_id BIGINT NOT NULL,
+                    field_name TEXT NOT NULL,
+                    old_value TEXT,
+                    new_value TEXT,
+                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                    FOREIGN KEY (product_id) REFERENCES products(id) ON DELETE CASCADE
+                )
+            """)
+            
             # Таблиця користувачів
             await conn.execute("""
                 CREATE TABLE IF NOT EXISTS users (
@@ -123,8 +137,81 @@ class Database:
                 )
             """)
             
-            # Додаємо колонки телефону та email якщо вони не існують
-            await self._migrate_contact_columns(conn)
+            # Міграція: Додаємо колонки телефону та email якщо вони не існують
+            try:
+                # Перевіряємо чи існує колона phone в таблиці orders
+                has_phone = await conn.fetchval(
+                    """SELECT EXISTS(
+                        SELECT 1 FROM information_schema.columns 
+                        WHERE table_name='orders' AND column_name='phone'
+                    )"""
+                )
+                
+                if not has_phone:
+                    await conn.execute("ALTER TABLE orders ADD COLUMN phone TEXT")
+                    logger.info("Added phone column to orders table")
+                
+                # Перевіряємо чи існує колона email в таблиці orders
+                has_email = await conn.fetchval(
+                    """SELECT EXISTS(
+                        SELECT 1 FROM information_schema.columns 
+                        WHERE table_name='orders' AND column_name='email'
+                    )"""
+                )
+                
+                if not has_email:
+                    await conn.execute("ALTER TABLE orders ADD COLUMN email TEXT")
+                    logger.info("Added email column to orders table")
+                
+                # Перевіряємо чи існує колона payment_status в таблиці orders
+                has_payment_status = await conn.fetchval(
+                    """SELECT EXISTS(
+                        SELECT 1 FROM information_schema.columns 
+                        WHERE table_name='orders' AND column_name='payment_status'
+                    )"""
+                )
+                
+                if not has_payment_status:
+                    await conn.execute("ALTER TABLE orders ADD COLUMN payment_status TEXT DEFAULT 'unpaid'")
+                    logger.info("Added payment_status column to orders table")
+                
+                # Перевіряємо чи існує колона payment_method в таблиці orders
+                has_payment_method = await conn.fetchval(
+                    """SELECT EXISTS(
+                        SELECT 1 FROM information_schema.columns 
+                        WHERE table_name='orders' AND column_name='payment_method'
+                    )"""
+                )
+                
+                if not has_payment_method:
+                    await conn.execute("ALTER TABLE orders ADD COLUMN payment_method TEXT")
+                    logger.info("Added payment_method column to orders table")
+                
+                # Перевіряємо колонки в таблиці users
+                has_user_phone = await conn.fetchval(
+                    """SELECT EXISTS(
+                        SELECT 1 FROM information_schema.columns 
+                        WHERE table_name='users' AND column_name='phone'
+                    )"""
+                )
+                
+                if not has_user_phone:
+                    await conn.execute("ALTER TABLE users ADD COLUMN phone TEXT")
+                    logger.info("Added phone column to users table")
+                
+                has_user_email = await conn.fetchval(
+                    """SELECT EXISTS(
+                        SELECT 1 FROM information_schema.columns 
+                        WHERE table_name='users' AND column_name='email'
+                    )"""
+                )
+                
+                if not has_user_email:
+                    await conn.execute("ALTER TABLE users ADD COLUMN email TEXT")
+                    logger.info("Added email column to users table")
+            
+            except Exception as e:
+                logger.warning(f"Migration error (may be normal for new DB): {e}")
             
             # Додаємо початкові товари, якщо база порожня
             await self._add_initial_products(conn)
@@ -149,83 +236,6 @@ class Database:
                 "INSERT INTO products (name, description, price, category, image_url, stock) VALUES ($1, $2, $3, $4, $5, $6)",
                 products
             )
-    
-    async def _migrate_contact_columns(self, conn: asyncpg.Connection):
-        """Додає колонки телефону та email якщо вони не існують (для міграції існуючих БД)."""
-        try:
-            # Перевіряємо чи існує колона phone в таблиці orders
-            has_phone = await conn.fetchval(
-                """SELECT EXISTS(
-                    SELECT 1 FROM information_schema.columns 
-                    WHERE table_name='orders' AND column_name='phone'
-                )"""
-            )
-            
-            if not has_phone:
-                await conn.execute("ALTER TABLE orders ADD COLUMN phone TEXT")
-                logger.info("Added phone column to orders table")
-            
-            # Перевіряємо чи існує колона email в таблиці orders
-            has_email = await conn.fetchval(
-                """SELECT EXISTS(
-                    SELECT 1 FROM information_schema.columns 
-                    WHERE table_name='orders' AND column_name='email'
-                )"""
-            )
-            
-            if not has_email:
-                await conn.execute("ALTER TABLE orders ADD COLUMN email TEXT")
-                logger.info("Added email column to orders table")
-            
-            # Перевіряємо чи існує колона payment_status в таблиці orders
-            has_payment_status = await conn.fetchval(
-                """SELECT EXISTS(
-                    SELECT 1 FROM information_schema.columns 
-                    WHERE table_name='orders' AND column_name='payment_status'
-                )"""
-            )
-            
-            if not has_payment_status:
-                await conn.execute("ALTER TABLE orders ADD COLUMN payment_status TEXT DEFAULT 'unpaid'")
-                logger.info("Added payment_status column to orders table")
-            
-            # Перевіряємо чи існує колона payment_method в таблиці orders
-            has_payment_method = await conn.fetchval(
-                """SELECT EXISTS(
-                    SELECT 1 FROM information_schema.columns 
-                    WHERE table_name='orders' AND column_name='payment_method'
-                )"""
-            )
-            
-            if not has_payment_method:
-                await conn.execute("ALTER TABLE orders ADD COLUMN payment_method TEXT")
-                logger.info("Added payment_method column to orders table")
-            
-            # Перевіряємо колонки в таблиці users
-            has_user_phone = await conn.fetchval(
-                """SELECT EXISTS(
-                    SELECT 1 FROM information_schema.columns 
-                    WHERE table_name='users' AND column_name='phone'
-                )"""
-            )
-            
-            if not has_user_phone:
-                await conn.execute("ALTER TABLE users ADD COLUMN phone TEXT")
-                logger.info("Added phone column to users table")
-            
-            has_user_email = await conn.fetchval(
-                """SELECT EXISTS(
-                    SELECT 1 FROM information_schema.columns 
-                    WHERE table_name='users' AND column_name='email'
-                )"""
-            )
-            
-            if not has_user_email:
-                await conn.execute("ALTER TABLE users ADD COLUMN email TEXT")
-                logger.info("Added email column to users table")
-        
-        except Exception as e:
-            logger.warning(f"Migration error (may be normal for new DB): {e}")
     
     async def get_all_products(self) -> List[Dict]:
         """Отримати всі товари."""
@@ -385,6 +395,37 @@ class Database:
                 return [dict(row) for row in rows]
         except Exception as e:
             logger.error(f"Error getting order edit logs: {e}", exc_info=True)
+            return []
+    
+    async def add_product_edit_log(self, product_id: int, admin_id: int, field_name: str, 
+                                  old_value: str, new_value: str) -> bool:
+        """Додати запис до логу редагування товару."""
+        try:
+            async with self.pool.acquire() as conn:
+                await conn.execute(
+                    """INSERT INTO product_edit_logs (product_id, admin_id, field_name, old_value, new_value)
+                       VALUES ($1, $2, $3, $4, $5)""",
+                    product_id, admin_id, field_name, old_value, new_value
+                )
+                return True
+        except Exception as e:
+            logger.error(f"Error adding product edit log: {e}", exc_info=True)
+            return False
+    
+    async def get_product_edit_logs(self, product_id: int, limit: int = 10) -> List[Dict]:
+        """Отримати логи редагування товару."""
+        try:
+            async with self.pool.acquire() as conn:
+                rows = await conn.fetch(
+                    """SELECT * FROM product_edit_logs 
+                       WHERE product_id = $1 
+                       ORDER BY created_at DESC 
+                       LIMIT $2""",
+                    product_id, limit
+                )
+                return [dict(row) for row in rows]
+        except Exception as e:
+            logger.error(f"Error getting product edit logs: {e}", exc_info=True)
             return []
     
     async def add_user(self, user_id: int, username: str, first_name: str, last_name: str = None):

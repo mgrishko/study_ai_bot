@@ -14,7 +14,10 @@ from keyboards.admin import (
     get_order_field_confirmation_keyboard,
     get_order_status_change_keyboard,
     get_order_detail_keyboard,
-    get_orders_list_keyboard
+    get_orders_list_keyboard,
+    get_product_edit_fields_keyboard,
+    get_product_field_confirmation_keyboard,
+    get_product_detail_keyboard
 )
 from keyboards.reply import (
     get_main_menu,
@@ -43,6 +46,9 @@ __all__ = [
     "get_order_status_change_keyboard",
     "get_order_detail_keyboard",
     "get_orders_list_keyboard",
+    "get_product_edit_fields_keyboard",
+    "get_product_field_confirmation_keyboard",
+    "get_product_detail_keyboard",
     "get_main_menu",
     "get_admin_menu",
     "get_hidden_keyboard",

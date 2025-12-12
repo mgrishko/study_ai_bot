@@ -24,7 +24,7 @@ from .orders import (
 )
 from .users import router as users_router
 from .users import admin_users_callback
-from .products import menu_router, add_router, image_router, delete_router
+from .products import menu_router, add_router, image_router, delete_router, edit_router
 from .products.menu import admin_products_callback
 from .products.add import (
     AddProductStates,
@@ -43,6 +43,13 @@ from .products.delete import (
     admin_delete_products_menu,
     confirm_delete_product,
     execute_delete_product
+)
+from .products.edit import (
+    admin_edit_products_menu,
+    show_product_detail,
+    choose_product_field,
+    process_product_field_input,
+    confirm_product_edit
 )
 from .products.image import (
     AdminGenerateImageStates,
@@ -84,6 +91,7 @@ __all__ = [
     "add_router",
     "image_router",
     "delete_router",
+    "edit_router",
     "admin_products_callback",
     "AddProductStates",
     "admin_add_product_start",
@@ -99,6 +107,11 @@ __all__ = [
     "admin_delete_products_menu",
     "confirm_delete_product",
     "execute_delete_product",
+    "admin_edit_products_menu",
+    "show_product_detail",
+    "choose_product_field",
+    "process_product_field_input",
+    "confirm_product_edit",
     "AdminGenerateImageStates",
     "admin_choose_generate_image",
     "admin_process_image_prompt",
