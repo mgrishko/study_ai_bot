@@ -9,7 +9,7 @@ def get_main_menu() -> ReplyKeyboardMarkup:
         keyboard=[
             [KeyboardButton(text="🛍️ Каталог"), KeyboardButton(text="📦 Мої замовлення")],
             [KeyboardButton(text="📚 Категорії"), KeyboardButton(text="❓ Допомога")],
-            [KeyboardButton(text="ℹ️ Про магазин"), KeyboardButton(text="🎨 AI")],
+            [KeyboardButton(text="ℹ️ Про магазин")],
         ],
         resize_keyboard=True,
         one_time_keyboard=False,
@@ -24,7 +24,6 @@ def get_admin_menu() -> ReplyKeyboardMarkup:
         keyboard=[
             [KeyboardButton(text="🛍️ Каталог"), KeyboardButton(text="📦 Мої замовлення")],
             [KeyboardButton(text="⚙️ Адміністратор"), KeyboardButton(text="❓ Допомога")],
-            [KeyboardButton(text="🎨 AI")],
         ],
         resize_keyboard=True,
         one_time_keyboard=False,

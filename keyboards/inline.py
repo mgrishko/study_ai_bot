@@ -89,3 +89,84 @@ def get_my_orders_keyboard():
     )
     builder.adjust(1)
     return builder.as_markup()
+
+
+def get_categories_keyboard(categories_with_counts):
+    """Створює клавіатуру для вибору категорії.
+    
+    Args:
+        categories_with_counts: Список кортежів (категорія, кількість товарів)
+    """
+    builder = InlineKeyboardBuilder()
+    
+    for category, count in categories_with_counts:
+        builder.button(
+            text=f"🔹 {category} ({count})",
+            callback_data=f"category:{category}"
+        )
+    
+    builder.button(
+        text="📦 Всі товари",
+        callback_data="all_products"
+    )
+    builder.button(
+        text="🏠 На початок",
+        callback_data="back_to_start"
+    )
+    builder.adjust(1)
+    return builder.as_markup()
+
+
+def get_products_by_category_keyboard(products, category_name):
+    """Створює клавіатуру для товарів у вибраній категорії.
+    
+    Args:
+        products: Список товарів з категорії
+        category_name: Назва категорії для контексту
+    """
+    builder = InlineKeyboardBuilder()
+    
+    for product in products:
+        builder.button(
+            text=f"{product['name']} - {float(product['price']):.0f} грн",
+            callback_data=f"product_cat:{product['id']}:{category_name}"
+        )
+    
+    builder.button(
+        text="◀️ Назад до категорій",
+        callback_data="back_to_categories"
+    )
+    builder.button(
+        text="🏠 На початок",
+        callback_data="back_to_start"
+    )
+    builder.adjust(1)
+    return builder.as_markup()
+
+
+def get_product_details_with_category_keyboard(product_id, category_name):
+    """Створює клавіатуру для деталей товару з навігацією до категорії.
+    
+    Args:
+        product_id: ID товару
+        category_name: Назва категорії, з якої товар відкритий
+    """
+    builder = InlineKeyboardBuilder()
+    builder.button(
+        text="🔊 Прослухати опис",
+        callback_data=f"listen_product:{product_id}"
+    )
+    builder.button(
+        text="🛒 Замовити",
+        callback_data=f"order_product:{product_id}"
+    )
+    builder.button(
+        text="◀️ Назад до категорії",
+        callback_data=f"back_to_category:{category_name}"
+    )
+    builder.button(
+        text="🏠 На початок",
+        callback_data="back_to_start"
+    )
+    builder.adjust(1)
+    return builder.as_markup()

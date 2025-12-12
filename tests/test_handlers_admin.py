@@ -356,7 +356,7 @@ class TestProcessProductStock:
         await process_product_stock(message, state)
         
         state.update_data.assert_called_once_with(stock=50)
-        state.set_state.assert_called_once_with(AddProductStates.waiting_for_image_url)
+        state.set_state.assert_called_once_with(AddProductStates.waiting_for_image_source)
     
     @pytest.mark.asyncio
     async def test_stock_negative(self):

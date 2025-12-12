@@ -132,17 +132,36 @@ class TestCategoriesButtonHandler:
     """Тести для обробника кнопки категорій."""
     
     @pytest.mark.asyncio
+    @pytest.mark.asyncio
     async def test_categories_button_with_categories(self, db_clean):
         """Тест кнопки категорій коли категорії є."""
+        # Додаємо тестові товари з різними категоріями
+        await db_clean.add_product(
+            name="Куртка 1",
+            description="Test",
+            price=100.0,
+            category="Куртки",
+            stock=1
+        )
+        await db_clean.add_product(
+            name="Пальто 1",
+            description="Test",
+            price=150.0,
+            category="Пальта",
+            stock=1
+        )
+        
         message = create_mock_message("📚 Категорії")
         
         with patch('handlers.user.db', db_clean):
-            categories = await db_clean.get_categories()
-            
             await handle_categories_button(message)
             
-            # Перевіряємо повідомлення
+            # Перевіряємо повідомлення з клавіатурою
             message.answer.assert_called_once()
+            call_args = message.answer.call_args
+            # Перевіряємо що є reply_markup (клавіатура)
+            # Вона передається як keyword argument
+            assert call_args.kwargs.get('reply_markup') is not None
     
     @pytest.mark.asyncio
     async def test_categories_button_without_categories(self, db_clean):
@@ -341,11 +360,12 @@ class TestCommandCategoriesHandler:
                 await command_categories_handler(message)
                 
                 message.answer.assert_called_once()
-                call_args = message.answer.call_args[0][0]
-                assert "Category 1" in call_args
-                assert "Category 2" in call_args
-                assert "(1 товарів)" in call_args
-                assert "(2 товарів)" in call_args
+                # Перевіряємо що повідомлення надіслано з клавіатурою
+                call_args = message.answer.call_args
+                assert "Виберіть категорію" in call_args[0][0]
+                # Перевіряємо що є reply_markup (клавіатура)
+                assert call_args[1]['reply_markup'] is not None
+
     
     @pytest.mark.asyncio
     async def test_command_categories_no_categories(self):
